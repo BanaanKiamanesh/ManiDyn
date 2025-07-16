@@ -1,0 +1,17 @@
+# MATLAB temporary files
+*.asv
+*.slxc
+
+# Generated folders
+slprj/
+
+# General MATLAB backups and cache
+*.autosave
+*.mat~
+*.m~
+*.mex*
+*.log
+*.fig
+*.mexw64
+*.mexmaci64
+*.mexa64
