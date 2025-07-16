@@ -1,14 +1,12 @@
-function [R, P] = ParseDH(AlphaList, AList, DList, ThetaList)
+function [R, P] = ParseDH(DHTable)
+    % Function to Compute the Rotation Matrix and Position Vectors for Each Frame
 
-    nParams = cellfun(@numel, {AlphaList, AList, DList, ThetaList});
+    AlphaList = DHTable.alpha;
+    AList     = DHTable.a;
+    DList     = DHTable.d;
+    ThetaList = DHTable.theta;
 
-    if ~all(nParams == nParams(1))
-        msg = sprintf(['All DH parameter lists must have the same length, ' ...
-            'but got lengths [α a d θ] = [%d %d %d %d].'], nParams);
-        error('ParseDH:InputLengthMismatch', msg);
-    end
-    
-    N = nParams(1);           % number of joints/links
+    N = nParams(1);           % Number of Links
 
     % Mem Alloc
     R = cell(1, N);           % Rotation Matrices
@@ -22,7 +20,7 @@ function [R, P] = ParseDH(AlphaList, AList, DList, ThetaList)
 
         TCurr = TCurr * T;
 
-        % Store rotation and position w.r.t. base
+        % Store Rotation and Pos w.r.t. base
         R{i} = TCurr(1:3, 1:3);
         P{i} = TCurr(1:3, 4);
     end
