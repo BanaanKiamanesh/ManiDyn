@@ -31,5 +31,9 @@ DynPar = DynStruct('DH', DH, 'Radius', R, 'Inertia', I, 'Mass', M, 'Length',L);
 % robot = ManipulatorDynamics(DynPar);
 robot = ManipulatorKinematics(DH);
 [R, P] = robot.CalculateFK;
-[R, P] = robot.CalculateFK('Generate', 'mfile', 'File', 'fk')
+% [R, P] = robot.CalculateFK('Generate', 'mfile', 'File', 'fk')
 % [R, P] = robot.CalculateFK('Generate', 'ccode', 'File', 'fk')
+
+Jana = robot.Jacobian;
+% Jana = robot.Jacobian('Type','analytical', 'Generate','mfile','File','jac_ana');
+% Jana = robot.Jacobian('Generate','ccode','File','jac_geo');

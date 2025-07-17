@@ -1,6 +1,7 @@
 # To Do List
 
-## 1) Jacobian
+
+## 1) Jacobian(All Done)
 ### 1.a) The origin of the COM frames
 ### 1.b) The origin of the frames attached to the joints
 ### 1.c) The Z-axis direction of the COM frames
