@@ -8,11 +8,12 @@ function DH = DHStruct(varargin)
     addParameter(Parser, 'a'    , [], @(x)isnumeric(x) && isvector(x));
     addParameter(Parser, 'd'    , [], @(x)isnumeric(x) && isvector(x));
     addParameter(Parser, 'theta', [], @(x)isnumeric(x) && isvector(x));
+    addParameter(Parser, 'type' , [], @(x)(ischar(x) || isstring(x)) && isvector(x));
     parse(Parser, varargin{:});
     R = Parser.Results;
 
     % DH List Length Validation
-    lengths = cellfun(@numel, {R.alpha, R.a, R.d, R.theta});
+    lengths = cellfun(@numel, {R.alpha, R.a, R.d, R.theta, R.type});
     filled  = lengths > 0;
 
     if ~all(lengths(filled) == lengths(find(filled, 1)))
@@ -26,10 +27,15 @@ function DH = DHStruct(varargin)
         error('DHStruct:MissingField', ['Missing DH entries: ', missing]);
     end
 
+    % Joint-Type Sanity Check: Only {'r', 'p'}
+    if ~all(ismember(lower(char(R.type)), ['r', 'p']))
+        error('DHStruct:BadType', 'Joint "type" must be ''r'' or ''p'' for every link.');
+    end
 
     % ‌Build Struct
-    DH = struct('alpha', R.alpha(:).', ...
-                'a'    , R.a(:).'    , ...
-                'd'    , R.d(:).'    , ...
-                'theta', R.theta(:).');
+    DH = struct('alpha', R.alpha(:)', ...
+                'a'    , R.a(:)'    , ...
+                'd'    , R.d(:)'    , ...
+                'theta', R.theta(:)', ...
+                'type' , squeeze(lower(char(R.type(:)'))));
 end

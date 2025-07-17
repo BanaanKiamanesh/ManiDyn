@@ -34,7 +34,7 @@ classdef ManipulatorDynamics
             end
 
             % Check DH
-            dhReq = {'alpha', 'a', 'd', 'theta'};
+            dhReq = {'alpha', 'a', 'd', 'theta', 'type'};
             if ~isstruct(DynPar.DH) || ~all(isfield(DynPar.DH, dhReq))
                 dhMissing = dhReq(~isfield(DynPar.DH, dhReq));
                 error('ManipulatorDynamics:BadDH', ...
@@ -44,7 +44,8 @@ classdef ManipulatorDynamics
 
             % Check DH Elements
             if any([numel(DynPar.DH.alpha), numel(DynPar.DH.a), ...
-                    numel(DynPar.DH.d), numel(DynPar.DH.theta)] ~= nLinks)
+                    numel(DynPar.DH.d), numel(DynPar.DH.theta), ...
+                    numel(DynPar.DH.type)] ~= nLinks)
                 error('ManipulatorDynamics:SizeMismatch', ...
                     'Each DH vector must have %d elements.', nLinks);
             end
@@ -61,6 +62,10 @@ classdef ManipulatorDynamics
 
             % Store, if Everything Looks Good
             obj.Par = orderfields(DynPar);
+        end
+
+        function CalculateFK(obj)
+            
         end
     end
 end

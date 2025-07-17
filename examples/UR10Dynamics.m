@@ -20,7 +20,13 @@ alpha = [   pi/2,       0,        0,     pi/2,  -pi/2,      0];
 a     = [      0,  -0.612,  -0.5723,        0,      0,      0];
 d     = [ 0.1273,       0,        0, 0.163941, 0.1157, 0.0922];
 theta = zeros(1, 6);
+type = ["r", "r", "r", "r", "r", "R"];
 
 % Data Structure Creation
-DH     = DHStruct('theta', theta, 'a', a, 'd', d, 'alpha', alpha);
+DH     = DHStruct('theta', theta, 'a', a, 'd', d, 'alpha', alpha, 'type', type);
 DynPar = DynStruct('DH', DH, 'Radius', R, 'Inertia', I, 'Mass', M, 'Length',L);
+
+
+%% Dynamics Generation
+% robot = ManipulatorDynamics(DynPar);
+robot = ManipulatorKinematics(DH);
