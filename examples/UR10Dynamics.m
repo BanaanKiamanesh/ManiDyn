@@ -30,3 +30,6 @@ DynPar = DynStruct('DH', DH, 'Radius', R, 'Inertia', I, 'Mass', M, 'Length',L);
 %% Dynamics Generation
 % robot = ManipulatorDynamics(DynPar);
 robot = ManipulatorKinematics(DH);
+[R, P] = robot.CalculateFK;
+[R, P] = robot.CalculateFK('Generate', 'mfile', 'File', 'fk')
+% [R, P] = robot.CalculateFK('Generate', 'ccode', 'File', 'fk')

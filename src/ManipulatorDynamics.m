@@ -63,9 +63,5 @@ classdef ManipulatorDynamics
             % Store, if Everything Looks Good
             obj.Par = orderfields(DynPar);
         end
-
-        function CalculateFK(obj)
-            
-        end
     end
 end

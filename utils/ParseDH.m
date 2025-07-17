@@ -6,7 +6,7 @@ function [R, P] = ParseDH(DHTable)
     DList     = DHTable.d;
     ThetaList = DHTable.theta;
 
-    N = nParams(1);           % Number of Links
+    N = numel(AList);           % Number of Links
 
     % Mem Alloc
     R = cell(1, N);           % Rotation Matrices
