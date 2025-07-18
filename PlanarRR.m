@@ -4,59 +4,73 @@ close all
 clc
 
 %% Parameter Declaration
-% Link lengths
 L1 = 1.0;
 L2 = 0.7;
 
-% DH
-alpha = [0 0];
-a     = [L1 L2];
-d     = [0 0];
-theta = [0 0];
+alpha = [0, 0];
+a     = [L1, L2];
+d     = [0, 0];
+theta = [0, 0];
 type  = 'rr';
 
-% Build DH struct & kinematics object
-DH  = DHStruct('alpha', alpha, 'a', a, 'd', d, 'theta', theta, 'type', type);
-kin = ManipulatorKinematics(DH);
+DH  = DHStruct('alpha', alpha, ...
+               'a', a, ...
+               'd', d, ...
+               'theta', theta, ...
+               'type', type);
 
 %% Symbolic Forward Kinematics
-[Eul, Pos] = kin.CalculateFK;
+RR = ManipulatorKinematics(DH);
+[Eul, Pos] = RR.CalculateFK;
 
 fprintf('--- Symbolic FK ---\n');
-disp('Position P(q) ='); disp(Pos);
-disp('Euler Angles ='); disp(Eul.');
+disp(Pos);
+disp(Eul);
 
-%% Theoretically expected planar formulas for comparison
+%% Quick analytical check
 syms q1 q2 real
-PExpected = [L1*cos(q1) + L2*cos(q1+q2)
-             L1*sin(q1) + L2*sin(q1+q2)
-             0];
-YawExpected = q1 + q2;
+
+PExpected = [L1*cos(q1)+L2*cos(q1+q2);  L1*sin(q1)+L2*sin(q1+q2); 0];
 
 fprintf('Matches expected?  %s\n\n', ...
-    matlab.lang.OnOffSwitchState(all(simplify(Pos-PExpected) == 0)));
+        matlab.lang.OnOffSwitchState(all(simplify(Pos-PExpected)==0)));
 
-%% Geo Jacobian
-Jg = kin.Jacobian;
+%% Jacobians
+Jg = RR.Jacobian;
+Ja = RR.Jacobian('Type', 'analytical');
 
-fprintf('--- Geometric Jacobian Jg(q) ---\n');
-disp(Jg);
+fprintf('--- Geometric Jacobian Jg ---\n');  disp(Jg);
+fprintf('--- Analytical Jacobian Ja ---\n'); disp(Ja);
 
-%% Anal Jacobian
-Ja = kin.Jacobian('Type', 'analytical');
+%% Evaluate at a sample configuration
+q_num = [pi/4; pi/6];
+Pg = double(subs(Pos, {'q1';'q2'}, num2cell(q_num)));
 
-fprintf('--- Analytical Jacobian Ja(q) ---\n');
-disp(Ja);
+fprintf('P(%.2f, %.2f) = [% .3f  % .3f  % .3f]\n', q_num, Pg);
 
-%% Evaluate at a Sample Config
-q_num = [pi/4;  pi/6];
-Pg = double(subs(Pos,  {'q1'; 'q2'}, num2cell(q_num)));
-fprintf('P(%4.2f, %4.2f) = [% .3f  % .3f  % .3f]\n', q_num, Pg);
+%% Inverse-Kinematics Validation (Rows option)
+fprintf('\n================  Inverse Kinematics Validation  ================\n');
+RowsSel = [1 2 4];                     % Px, Py, Yaw
 
-Jg_num = double(subs(Jg, {'q1'; 'q2'}, num2cell(q_num)));
-Ja_num = double(subs(Ja, {'q1'; 'q2'}, num2cell(q_num)));
+fkFun = RR.CalculateFK('Rows', RowsSel, 'Return', 'handle');
+jacFun  = RR.Jacobian('Type', 'analytical', ...
+                       'Rows', RowsSel, ...
+                       'Return', 'handle');
 
-fprintf('\nJg evaluated:\n');
-disp(Jg_num);
-fprintf('Ja evaluated:\n');
-disp(Ja_num);
+q_des = [pi/3; -pi/4];                 % Target Joint Set
+x_des = fkFun(q_des);                  % Desired Pose
+q0    = [0; 0];                        % Initial Guess
+
+fprintf('--- Newton IK ---\n');
+[qN, errN] = IK_Newton(fkFun, jacFun, q0, x_des, 50, 1e-8, 1e-4);
+fprintf('Iterations: %d, final err = %.3e, q = [% .4f  % .4f]\n', ...
+        numel(errN), errN(end), qN);
+
+fprintf('\n--- Gradient-Descent IK ---\n');
+[qG, errG] = IK_Gradient(fkFun, jacFun, q0, x_des, 300, 1e-8, 0.4); % α = 0.05
+fprintf('Iterations: %d, final err = %.3e, q = [% .4f  % .4f]\n', ...
+        numel(errG), errG(end), qG);
+
+fprintf('\nGround-Truth q_des = [% .4f  % .4f]\n', q_des);
+fprintf('q Error (Newton)   = [% .3e  % .3e]\n', qN-q_des);
+fprintf('q Error (Gradient) = [% .3e  % .3e]\n', qG-q_des);
