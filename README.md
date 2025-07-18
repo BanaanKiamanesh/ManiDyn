@@ -6,7 +6,7 @@
 ### 1.b) The origin of the frames attached to the joints
 ### 1.c) The Z-axis direction of the COM frames
 
-## 2) Numerical Inverse Kinematics
+## 2) Numerical Inverse Kinematics(All Done)
 ### 2.a) Gradient Descent
 ### 2.a) Newton's method
 
