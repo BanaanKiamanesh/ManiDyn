@@ -16,14 +16,21 @@ classdef ManipulatorKinematics
                     'DH struct missing field(s): %s', strjoin(dhMissing, ', '));
             end
 
-            nLinks = numel(DH.alpha);
+            % Breakdown of the Number of Joints
+            nPrismatic = length(regexp(DH.type, '[p]'));
+            nRevolute  = length(regexp(DH.type, '[r]'));
+            nFixed     = length(regexp(DH.type, '[f]'));
+
+            nLinks = nPrismatic + nRevolute + nFixed;
             if any([numel(DH.a), numel(DH.d), numel(DH.theta), numel(DH.type)] ~= nLinks)
                 error('ManipulatorKinematics:SizeMismatch', ...
                     'Each DH vector must have %d elements.', nLinks);
             end
 
             obj.DH  = orderfields(DH);
-            obj.DOF = nLinks;
+
+            % Calc Robot DOF Regarding Number of Fixed Joins
+            obj.DOF = nLinks - nFixed;
         end
         % ───────────────────── Forward-Kinematics ──────────────────────
         function [RotKine, TransKine] = CalculateFK(obj, varargin)
