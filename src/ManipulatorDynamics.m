@@ -104,12 +104,22 @@ classdef ManipulatorDynamics < handle
             end
             [R, P] = ParseDH(DHMod);
 
-            % ---- Geometric Jacobian from Kinematics Class -------------
-            Kin = ManipulatorKinematics(obj.Par.DH);
+            % ---- Centre-of-Mass positions -----------------------------
+            if ~isfield(obj.Par,'COM') || isempty(obj.Par.COM)
+                error('ManipulatorDynamics:MissingCOM', ...
+                      'DynPar.COM is required but was not provided.');
+            end
+            COM = obj.Par.COM;
+            PC  = cell(1,n);
+            for i = 1:n
+                ci   = sym(COM(i,:).');
+                PC{i}= P{i} + R{i}*ci;
+            end
 
-            Jg = Kin.Jacobian('Type', 'geometric', 'Return', 'symbolic');
-            Jp = Jg(1:3, :);
-            Jo = Jg(4:6, :);
+            % ---- Geometric Jacobian (only orientation part needed) ----
+            Kin = ManipulatorKinematics(obj.Par.DH);
+            Jg  = Kin.Jacobian('Type', 'geometric', 'Return', 'symbolic');
+            Jo  = Jg(4:6, :);
 
             % ---- Mass Matrix B(q) -------------------------------------
             B_ = sym.zeros(n);
@@ -118,14 +128,19 @@ classdef ManipulatorDynamics < handle
                 Ic = sym(obj.Par.Inertia{i});
                 Ri = R{i};
 
-                Jp_i = [Jp(:, 1:i), sym.zeros(3, n-i)];
+                % COM linear-velocity Jacobian
+                Jp_ci = jacobian(PC{i}, q_);
+
+                % angular-velocity Jacobian (first i columns active)
                 Jo_i = [Jo(:, 1:i), sym.zeros(3, n-i)];
-                B_   = B_ + m*(Jp_i'*Jp_i) + Jo_i'*Ri*Ic*Ri'*Jo_i;
+
+                % add link contribution
+                B_ = B_ + m*(Jp_ci.'*Jp_ci) + Jo_i.'*Ri*Ic*Ri.'*Jo_i;
             end
             obj.B = B_;
 
             % ---- Gravity Vector g(q) -----------------------------------
-            U = -sum( arrayfun(@(k)obj.Par.Mass(k) * g0_' * P{k}, 1:n) );
+            U = -sum( arrayfun(@(k)obj.Par.Mass(k) * g0_' * PC{k}, 1:n) );
             obj.g = jacobian(U, q_)';
 
             % ---- Coriolis / Centrifugal Matrix C(q, qdot) --------------

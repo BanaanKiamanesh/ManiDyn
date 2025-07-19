@@ -7,7 +7,7 @@ M = [   2,    2,    1,  0.5];
 L = [0.30, 0.25, 0.20, 0.10];          
 R = [0.05, 0.04, 0.03, 0.03];           
 
-I = cell(4, 1);                
+I = cell(4, 1);
 for i = 1:4
     I{i} = diag([ ...
         M(i)/12 * L(i)^2, ...
@@ -15,6 +15,11 @@ for i = 1:4
         0.5 * M(i) * R(i)^2 ...
     ]);
 end
+
+COM = [L(1)/2,   0,       0   
+       L(2)/2,   0,       0     
+            0,   0, -L(3)/2    
+            0,   0,       0];   
 
 % DH Table
 alpha = [   0,   pi, 0, 0];
@@ -25,7 +30,8 @@ type  = 'rrpr';
 
 % Data Structure Creation
 DH     = DHStruct('alpha', alpha, 'a', a, 'd', d, 'theta', theta, 'type', type);
-DynPar = DynStruct('Mass', M, 'Length', L, 'Radius', R, 'Inertia', I, 'DH', DH);
+DynPar = DynStruct('Mass', M, 'Length', L, 'Radius', R, 'Inertia', I, ...
+                   'COM', COM, 'DH', DH);
 
 %% Symbolic Model & Code Generation
 kin = ManipulatorKinematics(DH);

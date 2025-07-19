@@ -37,6 +37,14 @@ I = { ...
       0.000000, -0.000278,  0.001641 ] ...
 };
 
+COM = [-0.000023,  -0.010364,  -0.073360
+       -0.000044,  -0.099580,  -0.013278
+       -0.000044,  -0.006641,  -0.117892
+       -0.000018,  -0.075478,  -0.015006
+        0.000001,  -0.009432,  -0.063883
+        0.000001,  -0.045483,  -0.009650 ];
+
+
 % DH Table
 alpha = [ -pi/2, pi/2,   pi/2, pi/2,  -pi/2,   pi/2];
 a     = [     0,    0,      0,    0,      0,      0];
@@ -50,8 +58,8 @@ theta = [0, pi, pi, pi, pi, pi];
 type  = 'rrrrrr';
 
 % Data-Structure Creation
-DH     = DHStruct('alpha', alpha, 'a', a, 'd', d, 'theta', theta, 'type');
-DynPar = DynStruct('DH', DH, 'Mass', M, 'Inertia', I);
+DH     = DHStruct('alpha', alpha, 'a', a, 'd', d, 'theta', theta, 'type', type);
+DynPar = DynStruct('DH', DH, 'Mass', M, 'Inertia', I, 'COM', COM);
 
 %% Symbolic Model & Code Generation
 kin = ManipulatorKinematics(DH);
