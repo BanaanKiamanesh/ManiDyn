@@ -48,9 +48,9 @@ fprintf('--- Analytical Jacobian Ja ---\n'); disp(Ja);
 
 %% Evaluate at a sample configuration
 q_num = [pi/4; pi/6];
-Pg = double(subs(Pos, {'q1';'q2'}, num2cell(q_num)));
+Pg = vpa(subs(Pos, {'q1';'q2'}, num2cell(q_num)), 4);
 
-fprintf('P(%.2f, %.2f) = [% .3f  % .3f  % .3f]\n', q_num, Pg);
+fprintf('P(%.2f, %.2f, %.2f) = %s\n', q_num, char(Pg));
 
 %% Inverse-Kinematics Validation (Rows option)
 fprintf('\n================  Inverse Kinematics Validation  ================\n');

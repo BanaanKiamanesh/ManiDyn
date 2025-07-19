@@ -7,9 +7,7 @@ addpath '..\utils'
 addpath '..\src'
 
 %% Parameter Declaration
-L1 = 1.0;
-L2 = 0.7;
-L3 = 0.9;
+syms L1 L2 L3 real
 
 alpha = [0   , pi/2   , pi/2,  0];
 a     = [0   , 0      , 0   , L3];
@@ -51,9 +49,9 @@ fprintf('--- Analytical Jacobian Ja ---\n'); disp(Ja);
 
 %% Evaluate at a sample configuration
 q_num = [pi/4; 0.1; pi/6];
-Pg = double(subs(Pos, {'q1';'q2';'q3'}, num2cell(q_num)));
+Pg = vpa(subs(Pos, {'q1';'q2';'q3'}, num2cell(q_num)), 4);
 
-fprintf('P(%.2f, %.2f, %.2f) = [% .3f  % .3f  % .3f]\n', q_num, Pg);
+fprintf('P(%.2f, %.2f, %.2f) = %s\n', q_num, char(Pg));
 
 %% Inverse-Kinematics Validation (Rows option)
 fprintf('\n================  Inverse Kinematics Validation  ================\n');
@@ -74,7 +72,7 @@ fprintf('Iterations: %d, final err = %.3e, q = [% .4f  % .4f]\n', ...
     numel(ErrN), ErrN(end), qN);
 
 fprintf('\n--- Gradient-Descent IK ---\n');
-[qG, errG] = IK_Gradient(FKFun, JFun, q0, XDes, 300, 1e-8, 0.4); % α = 0.05
+[qG, errG] = IK_Gradient(FKFun, JFun, q0, XDes, 700, 1e-8, 0.08); % α = 0.05
 fprintf('Iterations: %d, final err = %.3e, q = [% .4f  % .4f]\n', ...
     numel(errG), errG(end), qG);
 
