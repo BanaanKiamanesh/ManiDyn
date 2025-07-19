@@ -5,8 +5,8 @@ function DH = DHStruct(varargin)
     Parser = inputParser;
     Parser.FunctionName = 'DHStruct';
     addParameter(Parser, 'alpha'   ,         [], @(x)isnumeric(x) && isvector(x));
-    addParameter(Parser, 'a'       ,         [], @(x)isnumeric(x) && isvector(x));
-    addParameter(Parser, 'd'       ,         [], @(x)isnumeric(x) && isvector(x));
+    addParameter(Parser, 'a'       ,         [], @(x)isvector(x));
+    addParameter(Parser, 'd'       ,         [], @(x)isvector(x));
     addParameter(Parser, 'theta'   ,         [], @(x)isnumeric(x) && isvector(x));
     addParameter(Parser, 'type'    ,         [], @(x)(ischar(x) || isstring(x)) && isvector(x));
     addParameter(Parser, 'notation', 'original', @(x)(ischar(x) || isstring(x)) && isvector(x));  % ◀ default added
