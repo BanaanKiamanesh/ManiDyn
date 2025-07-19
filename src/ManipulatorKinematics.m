@@ -58,6 +58,11 @@ classdef ManipulatorKinematics
 
             % ---- Choose What to Return ------------------------------------------------------
             if outTyp == "handle"
+                if ~all(ismember(char(symvar(PoseSel)), char(q')))
+                    error('ManipulatorKinematics:ExtraSymbolicVars', ...
+                    ['Forward kinematics has extra symbolic vars apart' ...
+                    ' from joints vars ''q''. Try another return type.']);
+                end
                 RotKine   = matlabFunction(PoseSel, 'Vars', {q}, 'Outputs', {'x'});
                 TransKine = [];
             else                                    % "Symbolic" (Default)
