@@ -55,33 +55,33 @@ Pg = double(subs(Pos, {'q1';'q2';'q3'}, num2cell(q_num)));
 
 fprintf('P(%.2f, %.2f, %.2f) = [% .3f  % .3f  % .3f]\n', q_num, Pg);
 
-% %% Inverse-Kinematics Validation (Rows option)
-% fprintf('\n================  Inverse Kinematics Validation  ================\n');
-% RowsSel = [1 2 4];                     % Px, Py, Yaw
-% 
-% FKFun = RR.CalculateFK('Rows', RowsSel, 'Return', 'handle');
-% JFun  = RR.Jacobian('Type', 'analytical', ...
-%     'Rows', RowsSel, ...
-%     'Return', 'handle');
-% 
-% qDes = [pi/3; -pi/4];                 % Target Joint Set
-% XDes = FKFun(qDes);                  % Desired Pose
-% q0    = [0; 0];                        % Initial Guess
-% 
-% fprintf('--- Newton IK ---\n');
-% [qN, ErrN] = IK_Newton(FKFun, JFun, q0, XDes, 50, 1e-8, 1e-4);
-% fprintf('Iterations: %d, final err = %.3e, q = [% .4f  % .4f]\n', ...
-%     numel(ErrN), ErrN(end), qN);
-% 
-% fprintf('\n--- Gradient-Descent IK ---\n');
-% [qG, errG] = IK_Gradient(FKFun, JFun, q0, XDes, 300, 1e-8, 0.4); % α = 0.05
-% fprintf('Iterations: %d, final err = %.3e, q = [% .4f  % .4f]\n', ...
-%     numel(errG), errG(end), qG);
-% 
-% fprintf('\nGround-Truth q_des = [% .4f  % .4f]\n', qDes);
-% fprintf('q Error (Newton)   = [% .3e  % .3e]\n', qN-qDes);
-% fprintf('q Error (Gradient) = [% .3e  % .3e]\n', qG-qDes);
-% 
+%% Inverse-Kinematics Validation (Rows option)
+fprintf('\n================  Inverse Kinematics Validation  ================\n');
+RowsSel = [1 2 4];                     % Px, Py, Yaw
+
+FKFun = RR.CalculateFK('Rows', RowsSel, 'Return', 'handle');
+JFun  = RR.Jacobian('Type', 'analytical', ...
+    'Rows', RowsSel, ...
+    'Return', 'handle');
+
+qDes = [pi/3; 0.1; -pi/4];           % Target Joint Set
+XDes = FKFun(qDes);                  % Desired Pose
+q0    = [0; 0; 0];                   % Initial Guess
+
+fprintf('--- Newton IK ---\n');
+[qN, ErrN] = IK_Newton(FKFun, JFun, q0, XDes, 50, 1e-8, 1e-4);
+fprintf('Iterations: %d, final err = %.3e, q = [% .4f  % .4f]\n', ...
+    numel(ErrN), ErrN(end), qN);
+
+fprintf('\n--- Gradient-Descent IK ---\n');
+[qG, errG] = IK_Gradient(FKFun, JFun, q0, XDes, 300, 1e-8, 0.4); % α = 0.05
+fprintf('Iterations: %d, final err = %.3e, q = [% .4f  % .4f]\n', ...
+    numel(errG), errG(end), qG);
+
+fprintf('\nGround-Truth q_des = [% .4f  % .4f]\n', qDes);
+fprintf('q Error (Newton)   = [% .3e  % .3e]\n', qN-qDes);
+fprintf('q Error (Gradient) = [% .3e  % .3e]\n', qG-qDes);
+
 % %% Dynamics validation (symbolic and numeric)
 % M = [1, 1];
 % L = [L1, L2];
