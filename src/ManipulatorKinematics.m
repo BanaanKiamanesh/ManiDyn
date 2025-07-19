@@ -51,8 +51,8 @@ classdef ManipulatorKinematics
             [DHMod, q] = obj.SymbolicDH;            % DH with q added
             [R, P]     = ParseDH(DHMod);
 
-            RotSym = simplify( Rot2Eul(R{end}) );
-            PosSym = simplify( P{end}          );
+            RotSym = Rot2Eul(R{end});
+            PosSym = P{end};
             PoseFull = [PosSym(:); RotSym(:)];     % 6×1
             PoseSel  = PoseFull(rows);             % Reduced or Full
 
@@ -121,11 +121,11 @@ classdef ManipulatorKinematics
                             Jo(:, i)=sym([0;0;0]); Jp(:, i)=zPrev;
                         end
                     end
-                    Jsym = simplify([Jp;Jo]);
+                    Jsym = [Jp; Jo];
                 case "analytical"
                     [R, P] = ParseDH(DHMod);
                     xSym  = [P{end}; Rot2Eul(R{end})];
-                    Jsym  = simplify( jacobian(xSym, q) );
+                    Jsym  = jacobian(xSym, q);
                 otherwise
                     error('ManipulatorKinematics:BadType', 'Unknown Jacobian type "%s".', jType);
             end

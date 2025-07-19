@@ -122,11 +122,11 @@ classdef ManipulatorDynamics < handle
                 Jo_i = [Jo(:, 1:i), sym.zeros(3, n-i)];
                 B_   = B_ + m*(Jp_i'*Jp_i) + Jo_i'*Ri*Ic*Ri'*Jo_i;
             end
-            obj.B = simplify(B_, 'Steps', 50);
+            obj.B = B_;
 
             % ---- Gravity Vector g(q) -----------------------------------
             U = -sum( arrayfun(@(k)obj.Par.Mass(k) * g0_' * P{k}, 1:n) );
-            obj.g = simplify( jacobian(U, q_)' );
+            obj.g = jacobian(U, q_)';
 
             % ---- Coriolis / Centrifugal Matrix C(q, qdot) --------------
             C_ = sym.zeros(n);
@@ -138,7 +138,7 @@ classdef ManipulatorDynamics < handle
                             + diff(B_(i, k), q_(j)) ...
                             - diff(B_(j, k), q_(i)) ) * qd_(k);
                     end
-                    C_(i, j) = simplify(cij);
+                    C_(i, j) = cij;
                 end
             end
             obj.C = C_;

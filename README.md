@@ -1,14 +1,9 @@
 # To Do List
 
+## 1) Modified DH
 
-## 1) Jacobian(All Done)
-### 1.a) The origin of the COM frames
-### 1.b) The origin of the frames attached to the joints
-### 1.c) The Z-axis direction of the COM frames
+## 2) Jacobian Based on Modified DH
 
-## 2) Numerical Inverse Kinematics(All Done)
-### 2.a) Gradient Descent
-### 2.a) Newton's method
+## 3) Forward Kinematics Based on Modified DH
 
-## 3) Dynamics
-### 3.a) Euler-Lagrange formulation
+## 4) Dynamics Based on Modified DH
