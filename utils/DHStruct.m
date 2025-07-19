@@ -28,9 +28,9 @@ function DH = DHStruct(varargin)
         error('DHStruct:MissingField', ['Missing DH entries: ', missing]);
     end
 
-    % Joint-Type Sanity Check: Only {'r', 'p'}
-    if ~all(ismember(lower(char(R.type)), ['r', 'p']))
-        error('DHStruct:BadType', 'Joint "type" must be ''r'' or ''p'' for every link.');
+    % Joint-Type Sanity Check: Only {'r', 'p', 'f'}
+    if ~all(ismember(lower(char(R.type)), ['r', 'p', 'f']))
+        error('DHStruct:BadType', 'Joint "type" must be ''r''(revolute) or ''p''(prismatic) or ''f''(fixed) for every link.');
     end
 
     % DH Notation Sanity Check: Only {'original', 'modified'}
