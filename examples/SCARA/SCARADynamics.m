@@ -45,9 +45,9 @@ kin.Jacobian('Type', 'geometric' , 'Generate', 'mfile', 'File', 'scara_jac_geo')
 kin.Jacobian('Type', 'analytical', 'Generate', 'mfile', 'File', 'scara_jac_ana');
 
 % Dynamics: B, C, g 
-dyn.MassMatrix('Generate', 'mfile', 'File', 'scara_dyn');
-dyn.Coriolis  ('Generate', 'mfile', 'File', 'scara_dyn');
-dyn.Gravity   ('Generate', 'mfile', 'File', 'scara_dyn');
+dyn.MassMatrix('Generate', 'mex', 'File', 'scara_dyn');
+dyn.Coriolis  ('Generate', 'mex', 'File', 'scara_dyn');
+dyn.Gravity   ('Generate', 'mex', 'File', 'scara_dyn');
 
 fprintf('SCARA code generation complete.\n');
 

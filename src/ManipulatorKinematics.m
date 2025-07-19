@@ -8,70 +8,54 @@ classdef ManipulatorKinematics
         % ───────────────────────── Constructor ─────────────────────────
         function obj = ManipulatorKinematics(DH)
             arguments, DH (1, 1) struct, end
-
             dhReq = {'alpha', 'a', 'd', 'theta', 'type'};
             if ~all(isfield(DH, dhReq))
                 dhMissing = dhReq(~isfield(DH, dhReq));
                 error('ManipulatorKinematics:BadDH', ...
-                    'DH struct missing field(s): %s', strjoin(dhMissing, ', '));
+                      'DH struct missing field(s): %s', strjoin(dhMissing, ', '));
             end
-
-            % Breakdown of the Number of Joints
             nPrismatic = length(regexp(DH.type, '[p]'));
             nRevolute  = length(regexp(DH.type, '[r]'));
             nFixed     = length(regexp(DH.type, '[f]'));
-
-            nLinks = nPrismatic + nRevolute + nFixed;
-            if any([numel(DH.a), numel(DH.d), numel(DH.theta), numel(DH.type)] ~= nLinks)
+            nLinks     = nPrismatic + nRevolute + nFixed;
+            if any([numel(DH.a), numel(DH.d), numel(DH.theta), numel(DH.type)]  ~=  nLinks)
                 error('ManipulatorKinematics:SizeMismatch', ...
-                    'Each DH vector must have %d elements.', nLinks);
+                      'Each DH vector must have %d elements.', nLinks);
             end
-
             obj.DH  = orderfields(DH);
-
-            % Calc Robot DOF Regarding Number of Fixed Joins
             obj.DOF = nLinks - nFixed;
         end
+
         % ───────────────────── Forward-Kinematics ──────────────────────
         function [RotKine, TransKine] = CalculateFK(obj, varargin)
             Parser = inputParser;
             addParameter(Parser, 'Generate', "none", @(s)isstring(s)||ischar(s));
-            addParameter(Parser, 'File', "forward_kinematics", @(s)isstring(s)||ischar(s));
-            addParameter(Parser, 'Rows', [], @(x)isnumeric(x)&&isvector(x));
-            addParameter(Parser, 'Return', "symbolic", @(s)isstring(s)||ischar(s));
+            addParameter(Parser, 'File'    , "forward_kinematics", @(s)isstring(s)||ischar(s));
+            addParameter(Parser, 'Rows'    , [], @(x)isnumeric(x)&&isvector(x));
+            addParameter(Parser, 'Return'  , "symbolic", @(s)isstring(s)||ischar(s));
             parse(Parser, varargin{:});
 
-            gType  = lower(string(Parser.Results.Generate));
-            fBase  = char(Parser.Results.File);
-            rows   = Parser.Results.Rows;
-            if isempty(rows), rows = 1:6; end
-            outTyp = lower(string(Parser.Results.Return));
+            gType = lower(string(Parser.Results.Generate));
+            fBase = char(Parser.Results.File);
+            rows  = Parser.Results.Rows; if isempty(rows), rows = 1:6; end
+            outTyp =  lower(string(Parser.Results.Return));
 
-            % ---- symbolic FK ----------------------------------------------------------------
-            [DHMod, q] = obj.SymbolicDH;            % DH with q added
+            [DHMod, q] = obj.SymbolicDH;
             [R, P]     = ParseDH(DHMod);
-
-            RotSym = Rot2Eul(R{end});
-            PosSym = P{end};
-            PoseFull = [PosSym(:); RotSym(:)];     % 6×1
-            PoseSel  = PoseFull(rows);             % Reduced or Full
+            RotSym    = Rot2Eul(R{end});
+            PosSym    = P{end};
+            PoseFull  = [PosSym(:); RotSym(:)];
+            PoseSel   = PoseFull(rows);
 
             % ---- Choose What to Return ------------------------------------------------------
-            if outTyp == "handle"
-                if ~all(ismember(char(symvar(PoseSel)), char(q')))
-                    error('ManipulatorKinematics:ExtraSymbolicVars', ...
-                    ['Forward kinematics has extra symbolic vars apart' ...
-                    ' from joints vars ''q''. Try another return type.']);
-                end
+            if outTyp  ==  "handle"
                 RotKine   = matlabFunction(PoseSel, 'Vars', {q}, 'Outputs', {'x'});
                 TransKine = [];
-            else                                    % "Symbolic" (Default)
-                if nargout < 2                      % Single-Output Call
-                    RotKine   = PoseSel;            % 3×1 or 6×1 Symbolic
-                    TransKine = [];
-                else                                % Two-Output Call
-                    RotKine   = RotSym;
-                    TransKine = PosSym;
+            else
+                if nargout<2
+                    RotKine = PoseSel;  TransKine = [];
+                else
+                    RotKine = RotSym;   TransKine = PosSym;
                 end
             end
 
@@ -80,26 +64,35 @@ classdef ManipulatorKinematics
                 c = matlab.lang.makeValidName(fBase);
                 switch gType
                     case "mfile"
-                        matlabFunction(PoseSel, 'File', c, 'Vars', {q}, ...
-                            'Outputs', {'x'}, 'Comment', 'Forward kinematics (selected rows)');
+                        matlabFunction(PoseSel, 'File', c, 'Vars', {q}, 'Outputs', {'x'}, ...
+                                       'Comment', 'Forward kinematics (selected rows)');
                         fprintf('MATLAB function "%s.m" generated.\n', c);
+
                     case "ccode"
                         fid = fopen([c '.c'], 'w');
                         fprintf(fid, '/* Forward kinematics generated by CalculateFK */\n');
-                        fprintf(fid, '%s', ccode(PoseSel));
-                        fclose(fid);
+                        fprintf(fid, '%s', ccode(PoseSel)); fclose(fid);
                         fprintf('C code "%s.c" generated.\n', c);
+
+                    case "mex"
+                        wrap = [c '_wrap'];
+                        matlabFunction(PoseSel, 'File', wrap, 'Vars', {q}, 'Outputs', {'x'});
+                        n = obj.DOF;
+                        codegen(wrap, '-o', c, '-args', {coder.typeof(0, [n 1], false)});
+                        delete([wrap '.m']);
+                        fprintf('MEX file "%s.%s" generated.\n', c, mexext);
                 end
             end
         end
+
         % ───────────────────────── Jacobian ────────────────────────────
         function J = Jacobian(obj, varargin)
             Parser = inputParser;
-            addParameter(Parser, 'Type', "geometric", @(s)isstring(s)||ischar(s));
+            addParameter(Parser, 'Type'    , "geometric", @(s)isstring(s)||ischar(s));
             addParameter(Parser, 'Generate', "none", @(s)isstring(s)||ischar(s));
-            addParameter(Parser, 'File', "jacobian", @(s)isstring(s)||ischar(s));
-            addParameter(Parser, 'Rows', [], @(x)isnumeric(x)&&isvector(x));
-            addParameter(Parser, 'Return', "symbolic", @(s)isstring(s)||ischar(s));
+            addParameter(Parser, 'File'    , "jacobian", @(s)isstring(s)||ischar(s));
+            addParameter(Parser, 'Rows'    , [], @(x)isnumeric(x)&&isvector(x));
+            addParameter(Parser, 'Return'  , "symbolic", @(s)isstring(s)||ischar(s));
             parse(Parser, varargin{:});
 
             jType  = lower(string(Parser.Results.Type));
@@ -114,20 +107,17 @@ classdef ManipulatorKinematics
             switch jType
                 case "geometric"
                     [R, P] = ParseDH(DHMod);
-                    Pe     = P{end};
-                    Jp     = sym.zeros(3, obj.DOF);
-                    Jo     = sym.zeros(3, obj.DOF);
-                    zPrev  = [0;0;1]; pPrev = [0;0;0];
-
-                    for i  = 1:obj.DOF
+                    Pe    = P{end};
+                    Jp    = sym.zeros(3, obj.DOF);
+                    Jo    = sym.zeros(3, obj.DOF);
+                    zPrev = [0;0;1]; pPrev = [0;0;0];
+                    for i = 1:obj.DOF
                         if strcmp(DHMod.notation, 'original')
-                            % Original DH Case
                             if i>1, zPrev = R{i-1}(:, 3); pPrev = P{i-1}; end
                         else
-                            % Modified DH Case
                             zPrev = R{i}(:, 3); pPrev = P{i};
                         end
-                        if DHMod.type(i) == 'r'
+                        if DHMod.type(i)  ==  'r'
                             Jo(:, i) = zPrev; Jp(:, i) = cross(zPrev, Pe-pPrev);
                         else
                             Jo(:, i) = sym([0;0;0]); Jp(:, i) = zPrev;
@@ -136,12 +126,11 @@ classdef ManipulatorKinematics
                     Jsym = [Jp; Jo];
                 case "analytical"
                     [R, P] = ParseDH(DHMod);
-                    xSym  = [P{end}; Rot2Eul(R{end})];
-                    Jsym  = jacobian(xSym, q);
+                    xSym = [P{end}; Rot2Eul(R{end})];
+                    Jsym = jacobian(xSym, q);
                 otherwise
-                    error('ManipulatorKinematics:BadType', 'Unknown Jacobian type "%s".', jType);
+                    error('ManipulatorKinematics:BadType', 'Unknown Jacobian');
             end
-
             if isempty(rows), rows = 1:size(Jsym, 1); end
             Jsel = Jsym(rows, :);
 
@@ -158,14 +147,22 @@ classdef ManipulatorKinematics
                 switch gType
                     case "mfile"
                         matlabFunction(Jsel, 'File', c, 'Vars', {q}, 'Outputs', {'J'}, ...
-                            'Comment', ['Jacobian (' jType ', selected rows)']);
+                          'Comment', ['Jacobian (' jType ', selected rows)']);
                         fprintf('MATLAB function "%s.m" generated.\n', c);
+
                     case "ccode"
-                        fid = fopen([c, '.c'], 'w');
+                        fid = fopen([c '.c'], 'w');
                         fprintf(fid, '/* Jacobian (%s) generated by ManipulatorKinematics */\n', jType);
-                        fprintf(fid, '%s', ccode(Jsel));
-                        fclose(fid);
+                        fprintf(fid, '%s', ccode(Jsel)); fclose(fid);
                         fprintf('C code "%s.c" generated.\n', c);
+
+                    case "mex"
+                        wrap = [c '_wrap'];
+                        matlabFunction(Jsel, 'File', wrap, 'Vars', {q}, 'Outputs', {'J'});
+                        n = obj.DOF;
+                        codegen(wrap, '-o', c, '-args', {coder.typeof(0, [n 1], false)});
+                        delete([wrap '.m']);
+                        fprintf('MEX file "%s.%s" generated.\n', c, mexext);
                 end
             end
         end
@@ -174,18 +171,14 @@ classdef ManipulatorKinematics
     methods (Access = private)
         function [DHMod, q] = SymbolicDH(obj)
             q = sym('q', [obj.DOF 1], 'real');
-
-            DHMod        = obj.DH;
-            DHMod.alpha  = sym(DHMod.alpha);
-            DHMod.a      = sym(DHMod.a);
-            DHMod.d      = sym(DHMod.d);
-            DHMod.theta  = sym(DHMod.theta);
-
+            DHMod       = obj.DH;
+            DHMod.alpha = sym(DHMod.alpha); DHMod.a = sym(DHMod.a);
+            DHMod.d     = sym(DHMod.d);     DHMod.theta = sym(DHMod.theta);
             for i = 1:obj.DOF
                 if obj.DH.type(i) == 'r'
                     DHMod.theta(i) = DHMod.theta(i) + q(i);
                 elseif obj.DH.type(i) == 'p'
-                    DHMod.d(i)     = DHMod.d(i)     + q(i);
+                    DHMod.d(i)     = DHMod.d(i) + q(i);
                 end
             end
         end

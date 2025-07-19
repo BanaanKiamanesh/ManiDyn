@@ -39,16 +39,16 @@ kin = ManipulatorKinematics(DH);
 dyn = ManipulatorDynamics(DynPar);
 
 % Forward Kinematics
-kin.CalculateFK('Rows', 1:6, 'Generate', 'mfile', 'File', 'ur10_fk');
+kin.CalculateFK('Rows', 1:6, 'Generate', 'mex', 'File', 'ur10_fk');
 
 % Geometric & Analytical Jacobians
-kin.Jacobian('Type', 'geometric' , 'Generate', 'mfile', 'File', 'ur10_jac_geo');
-kin.Jacobian('Type', 'analytical', 'Generate', 'mfile', 'File', 'ur10_jac_ana');
+kin.Jacobian('Type', 'geometric' , 'Generate', 'mex', 'File', 'ur10_jac_geo');
+kin.Jacobian('Type', 'analytical', 'Generate', 'mex', 'File', 'ur10_jac_ana');
 
 % Dynamics: B, C, g 
-dyn.MassMatrix('Generate', 'mfile', 'File', 'ur10_dyn');
-dyn.Coriolis  ('Generate', 'mfile', 'File', 'ur10_dyn');
-dyn.Gravity   ('Generate', 'mfile', 'File', 'ur10_dyn');
+dyn.MassMatrix('Generate', 'mex', 'File', 'ur10_dyn');
+dyn.Coriolis  ('Generate', 'mex', 'File', 'ur10_dyn');
+dyn.Gravity   ('Generate', 'mex', 'File', 'ur10_dyn');
 
 fprintf('\nCode Generation Complete!\n');
 
