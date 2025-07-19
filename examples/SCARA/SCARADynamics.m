@@ -24,7 +24,7 @@ theta = [   0,    0, 0, 0];
 type  = 'rrpr';
 
 % Data Structure Creation
-DH     = DHStruct('alpha', alpha, 'a', a, 'd', d, 'theta', theta, 'type', type, 'notation', 'original');
+DH     = DHStruct('alpha', alpha, 'a', a, 'd', d, 'theta', theta, 'type', type);
 DynPar = DynStruct('Mass', M, 'Length', L, 'Radius', R, 'Inertia', I, 'DH', DH);
 
 %% Symbolic Model & Code Generation

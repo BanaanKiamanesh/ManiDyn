@@ -23,7 +23,7 @@ theta = zeros(6, 1);
 type  = 'rrrrrr';
 
 % Data Structure Creation
-DH     = DHStruct('theta', theta, 'a', a, 'd', d, 'alpha', alpha, 'type', type, 'notation', 'original');
+DH     = DHStruct('theta', theta, 'a', a, 'd', d, 'alpha', alpha, 'type', type);
 DynPar = DynStruct('DH', DH, 'Radius', R, 'Inertia', I, 'Mass', M, 'Length', L);
 
 

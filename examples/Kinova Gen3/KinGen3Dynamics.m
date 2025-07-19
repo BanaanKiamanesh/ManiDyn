@@ -50,7 +50,7 @@ theta = [0, pi, pi, pi, pi, pi];
 type  = 'rrrrrr';
 
 % Data-Structure Creation
-DH     = DHStruct('alpha', alpha, 'a', a, 'd', d, 'theta', theta, 'type', type, 'notation', 'original');
+DH     = DHStruct('alpha', alpha, 'a', a, 'd', d, 'theta', theta, 'type');
 DynPar = DynStruct('DH', DH, 'Mass', M, 'Inertia', I);
 
 %% Symbolic Model & Code Generation
