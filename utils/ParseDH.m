@@ -5,6 +5,7 @@ function [R, P] = ParseDH(DHTable)
     AList     = DHTable.a;
     DList     = DHTable.d;
     ThetaList = DHTable.theta;
+    Notation  = DHTable.notation;
 
     N = numel(AList);           % Number of Links
 
@@ -16,7 +17,7 @@ function [R, P] = ParseDH(DHTable)
 
     for i = 1:N
         DHRow = [AlphaList(i), AList(i), DList(i), ThetaList(i)];
-        T = HomoTrans(DHRow);
+        T = HomoTrans(DHRow, Notation);
 
         TCurr = TCurr * T;
 

@@ -9,6 +9,7 @@ function DH = DHStruct(varargin)
     addParameter(Parser, 'd'    , [], @(x)isnumeric(x) && isvector(x));
     addParameter(Parser, 'theta', [], @(x)isnumeric(x) && isvector(x));
     addParameter(Parser, 'type' , [], @(x)(ischar(x) || isstring(x)) && isvector(x));
+    addParameter(Parser, 'notation' , [], @(x)(ischar(x) || isstring(x)) && isvector(x));
     parse(Parser, varargin{:});
     R = Parser.Results;
 
@@ -32,10 +33,19 @@ function DH = DHStruct(varargin)
         error('DHStruct:BadType', 'Joint "type" must be ''r'' or ''p'' for every link.');
     end
 
+    % DH Notation Sanity Check: Only {'original', 'modified'}
+    if ~any(strcmpi(char(R.notation), {'original', 'modified'}))
+        error('DHStruct:BadNotation', 'DH "notation" must be ''original''(default) or ''modified''.');
+    end
+
+    % DH Notation Default Value (Whene Notation Field is Empty)
+    if isempty(R.notation), R.notation = 'original'; end
+
     % ‌Build Struct
-    DH = struct('alpha', R.alpha(:)', ...
-                'a'    , R.a(:)'    , ...
-                'd'    , R.d(:)'    , ...
-                'theta', R.theta(:)', ...
-                'type' , squeeze(lower(char(R.type(:)'))));
+    DH = struct('alpha'   , R.alpha(:)'                     , ...
+                'a'       , R.a(:)'                         , ...
+                'd'       , R.d(:)'                         , ...
+                'theta'   , R.theta(:)'                     , ...
+                'type'    , squeeze(lower(char(R.type(:)'))), ...
+                'notation', squeeze(lower(char(R.notation(:)'))));
 end
