@@ -3,6 +3,9 @@ clear
 close all
 clc
 
+addpath '..\utils'
+addpath '..\src'
+
 %% Parameter Declaration
 L1 = 1.0;
 L2 = 0.7;
@@ -17,7 +20,8 @@ DH  = DHStruct('alpha', alpha, ...
     'a', a, ...
     'd', d, ...
     'theta', theta, ...
-    'type', type);
+    'type', type, ...
+    'notation', 'original');
 
 %% Symbolic Forward Kinematics
 RR = ManipulatorKinematics(DH);
@@ -98,7 +102,7 @@ g = MD.Gravity;     disp('Symbolic gravity vector g(q):');      disp(g);
 
 % Test for Costume Gravity Direction
 fprintf('\n================  Dynamics Validation(g = [0, -9.81, 0])  ==========================\n');
-MD = ManipulatorDynamics(DynPar, "Gravity", [0 -9.81 0]);
+MD = ManipulatorDynamics(DynPar, 'Gravity', [0 -9.81 0]);
 
 B = MD.MassMatrix;  disp('Symbolic Mass matrix B(q):');         disp(B);
 C = MD.Coriolis;    disp('Symbolic Coriolis matrix C(q, qd):'); disp(C);
