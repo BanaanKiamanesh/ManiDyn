@@ -88,9 +88,13 @@ I1 = 1/12 * M(1) * diag([0 0 L1^2]);
 I2 = 1/12 * M(2) * diag([0 0 L2^2]);
 I = {sym(I1), sym(I2)};
 
+COM = [L1/2, 0.0, 0.0
+       L2/2, 0.0, 0.0];
+
 DynPar = DynStruct('Mass', M, ...
     'Length', L, 'Radius', R, ...
-    'Inertia', I, 'DH', DH);
+    'Inertia', I, 'DH', DH, ...
+    'COM', COM);
 
 % Test for normal Gravity Direction
 fprintf('\n================  Dynamics Validation(g = [0, 0, -9.81])  ==========================\n');
