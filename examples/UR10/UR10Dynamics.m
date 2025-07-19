@@ -19,11 +19,11 @@ I{6} = diag([M(6)/12*(L(6)^2+3*R(6)^2), M(6)/12*(L(6)^2+3*R(6)^2),           0.5
 alpha = [   pi/2,       0,        0,     pi/2,  -pi/2,      0];
 a     = [      0,  -0.612,  -0.5723,        0,      0,      0];
 d     = [ 0.1273,       0,        0, 0.163941, 0.1157, 0.0922];
-theta = zeros(1, 6);
-type = ["r", "r", "r", "r", "r", "r"];
+theta = zeros(6, 1); 
+type  = 'rrrrrr';
 
 % Data Structure Creation
-DH     = DHStruct('theta', theta, 'a', a, 'd', d, 'alpha', alpha, 'type', type);
+DH     = DHStruct('theta', theta, 'a', a, 'd', d, 'alpha', alpha, 'type', type, 'notation', 'original');
 DynPar = DynStruct('DH', DH, 'Radius', R, 'Inertia', I, 'Mass', M, 'Length', L);
 
 
@@ -31,14 +31,14 @@ DynPar = DynStruct('DH', DH, 'Radius', R, 'Inertia', I, 'Mass', M, 'Length', L);
 kin = ManipulatorKinematics(DH);
 dyn = ManipulatorDynamics(DynPar);
 
-% forward kinematics
+% Forward Kinematics
 kin.CalculateFK('Rows', 1:6, 'Generate', 'mfile', 'File', 'ur10_fk');
 
-% geometric & analytical Jacobians
+% Geometric & Analytical Jacobians
 kin.Jacobian('Type', 'geometric' , 'Generate', 'mfile', 'File', 'ur10_jac_geo');
 kin.Jacobian('Type', 'analytical', 'Generate', 'mfile', 'File', 'ur10_jac_ana');
 
-% dynamics: B, C, g 
+% Dynamics: B, C, g 
 dyn.MassMatrix('Generate', 'mfile', 'File', 'ur10_dyn');
 dyn.Coriolis  ('Generate', 'mfile', 'File', 'ur10_dyn');
 dyn.Gravity   ('Generate', 'mfile', 'File', 'ur10_dyn');
