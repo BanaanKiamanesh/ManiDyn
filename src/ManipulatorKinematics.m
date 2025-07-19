@@ -109,16 +109,23 @@ classdef ManipulatorKinematics
             switch jType
                 case "geometric"
                     [R, P] = ParseDH(DHMod);
-                    Pe    = P{end};
-                    Jp    = sym.zeros(3, obj.DOF);
-                    Jo    = sym.zeros(3, obj.DOF);
-                    zPrev = [0;0;1]; pPrev = [0;0;0];
-                    for i = 1:obj.DOF
-                        if i>1, zPrev = R{i-1}(:, 3); pPrev = P{i-1}; end
-                        if DHMod.type(i)=='r'
-                            Jo(:, i)=zPrev; Jp(:, i)=cross(zPrev, Pe-pPrev);
+                    Pe     = P{end};
+                    Jp     = sym.zeros(3, obj.DOF);
+                    Jo     = sym.zeros(3, obj.DOF);
+                    zPrev  = [0;0;1]; pPrev = [0;0;0];
+
+                    for i  = 1:obj.DOF
+                        if strcmp(DHMod.notation, 'original')
+                            % Original DH Case
+                            if i>1, zPrev = R{i-1}(:, 3); pPrev = P{i-1}; end
                         else
-                            Jo(:, i)=sym([0;0;0]); Jp(:, i)=zPrev;
+                            % Modified DH Case
+                            zPrev = R{i}(:, 3); pPrev = P{i};
+                        end
+                        if DHMod.type(i) == 'r'
+                            Jo(:, i) = zPrev; Jp(:, i) = cross(zPrev, Pe-pPrev);
+                        else
+                            Jo(:, i) = sym([0;0;0]); Jp(:, i) = zPrev;
                         end
                     end
                     Jsym = [Jp; Jo];

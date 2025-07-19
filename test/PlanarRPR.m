@@ -11,10 +11,10 @@ L1 = 1.0;
 L2 = 0.7;
 L3 = 0.9;
 
-alpha = [0, pi/2, pi/2, 0];
-a     = [0, 0, 0, L3];
-d     = [0, L1 + L2, 0, 0];
-theta = [pi/2, pi, pi/2, 0];
+alpha = [0   , pi/2   , pi/2,  0];
+a     = [0   , 0      , 0   , L3];
+d     = [0   , L1 + L2, 0   ,  0];
+theta = [pi/2,      pi, pi/2,  0];
 type  = 'rprf';
 
 DH  = DHStruct('alpha', alpha, ...
@@ -32,13 +32,15 @@ fprintf('--- Symbolic FK ---\n');
 disp(Pos);
 disp(Eul);
 
-% %% Quick analytical check
-% syms q1 q2 real
-% 
-% PExpected = [L1*cos(q1)+L2*cos(q1+q2);  L1*sin(q1)+L2*sin(q1+q2); 0];
-% 
-% fprintf('Matches expected?  %s\n\n', ...
-%     matlab.lang.OnOffSwitchState(all(simplify(Pos-PExpected)==0)));
+%% Quick analytical check
+syms q1 q2 q3 real
+
+PExpected = [L3*cos(q1 + q3) + L1*cos(q1) + L2*cos(q1) + q2*cos(q1);
+             L3*sin(q1 + q3) + L1*sin(q1) + L2*sin(q1) + q2*sin(q1);
+                                                                 0];
+
+fprintf('Matches expected?  %s\n\n', ...
+    matlab.lang.OnOffSwitchState(all(simplify(Pos-PExpected)==0)));
 
 %% Jacobians
 Jg = RR.Jacobian;
@@ -47,11 +49,11 @@ Ja = RR.Jacobian('Type', 'analytical');
 fprintf('--- Geometric Jacobian Jg ---\n');  disp(Jg);
 fprintf('--- Analytical Jacobian Ja ---\n'); disp(Ja);
 
-% %% Evaluate at a sample configuration
-% q_num = [pi/4; pi/6];
-% Pg = double(subs(Pos, {'q1';'q2'}, num2cell(q_num)));
-% 
-% fprintf('P(%.2f, %.2f) = [% .3f  % .3f  % .3f]\n', q_num, Pg);
+%% Evaluate at a sample configuration
+q_num = [pi/4; 0.1; pi/6];
+Pg = double(subs(Pos, {'q1';'q2';'q3'}, num2cell(q_num)));
+
+fprintf('P(%.2f, %.2f, %.2f) = [% .3f  % .3f  % .3f]\n', q_num, Pg);
 
 % %% Inverse-Kinematics Validation (Rows option)
 % fprintf('\n================  Inverse Kinematics Validation  ================\n');
@@ -79,7 +81,7 @@ fprintf('--- Analytical Jacobian Ja ---\n'); disp(Ja);
 % fprintf('\nGround-Truth q_des = [% .4f  % .4f]\n', qDes);
 % fprintf('q Error (Newton)   = [% .3e  % .3e]\n', qN-qDes);
 % fprintf('q Error (Gradient) = [% .3e  % .3e]\n', qG-qDes);
-
+% 
 % %% Dynamics validation (symbolic and numeric)
 % M = [1, 1];
 % L = [L1, L2];
