@@ -1,4 +1,4 @@
-# ManiDyn
+****# ManiDyn
 
 A **MATLAB®** toolbox for symbolic modelling of serial-link robot **Manipulators**.  
 ManiDyn lets you move seamlessly from high-level geometric descriptions (DH parameters) to
@@ -13,20 +13,18 @@ exported as `.m` files, C source, or compiled **MEX** binaries for real-time use
 
 ---
 ## Table of Contents
-- [ManiDyn](#manidyn)
-  - [Table of Contents](#table-of-contents)
-  - [Installation](#installation)
-  - [Directory Overview](#directory-overview)
-  - [Defining a Manipulator](#defining-a-manipulator)
-  - [Kinematics Workflow](#kinematics-workflow)
-  - [Dynamics Workflow](#dynamics-workflow)
-  - [Supported Output Formats](#supported-output-formats)
-  - [Inverse Kinematics Utilities](#inverse-kinematics-utilities)
-  - [Inverse Kinematics Algorithms](#inverse-kinematics-algorithms)
-  - [Examples](#examples)
-  - [Testing](#testing)
-  - [Requirements](#requirements)
-  - [License](#license)
+- [Table of Contents](#table-of-contents)
+- [Installation](#installation)
+- [Defining a Manipulator](#defining-a-manipulator)
+- [Kinematics Workflow](#kinematics-workflow)
+- [Dynamics Workflow](#dynamics-workflow)
+- [Supported Output Formats](#supported-output-formats)
+- [Inverse Kinematics Utilities](#inverse-kinematics-utilities)
+- [Inverse Kinematics Algorithms](#inverse-kinematics-algorithms)
+- [Examples](#examples)
+- [Testing](#testing)
+- [Requirements](#requirements)
+- [License](#license)
 
 ---
 ## Installation
@@ -36,24 +34,6 @@ exported as `.m` files, C source, or compiled **MEX** binaries for real-time use
 >> install   % adds folders to MATLAB path
 ```
 Alternatively add the `src` and `utils` folders to the `MATLABPATH` manually.
-
----
-## Directory Overview
-| Folder / File | Description |
-|---------------|-------------|
-| `src/` | Core classes implemented as **value objects** |
-| &nbsp;&nbsp;`ManipulatorKinematics.m` | Symbolic FK & Jacobians |
-| &nbsp;&nbsp;`ManipulatorDynamics.m`  | Symbolic dynamics (B, C, g) |
-| `utils/` | Lightweight helper functions |
-| &nbsp;&nbsp;`DHStruct.m` | Build DH parameter structs |
-| &nbsp;&nbsp;`DynStruct.m` | Build dynamic parameter structs |
-| &nbsp;&nbsp;`HomoTrans.m` | 4×4 transform from a DH row |
-| &nbsp;&nbsp;`RotMatrix.m / TrnsMatrix.m` | Elementary rotation / translation matrices |
-| &nbsp;&nbsp;`Rot2Eul.m` | ZYX Euler angle extractor |
-| &nbsp;&nbsp;`ParseDH.m` | Vectorised batch FK for all frames |
-| &nbsp;&nbsp;`IK_Gradient.m / IK_Newton.m` | Numerical inverse-kinematics solvers |
-| `examples/` | End-to-end demo scripts (UR10, SCARA, Kinova Gen3 …) |
-| `test/` | Simple unit tests for planar arms |
 
 ---
 ## Defining a Manipulator
@@ -71,10 +51,17 @@ DH = DHStruct('alpha',  [0 0], ...
 
 2. **Dynamics** – Create a matching dynamic parameter structure with `DynStruct`:
 ```matlab
-Dyn = DynStruct('Mass',    [1 1], ...
-                'Inertia', {zeros(3), zeros(3)}, ...
-                'COM',     [0.5 0 0; 0.5 0 0], ...
-                'DH',      DH);
+
+DynAll = DynStruct('Mass',    [1 1], ...          % REQUIRED → link masses
+                    'Length',  [1 1], ...          % OPTIONAL → link lengths (for visuals)
+                    'Radius',  [0.05 0.05], ...    % OPTIONAL → link radii  (for visuals)
+                    'Inertia', {zeros(3), zeros(3)}, ... % REQUIRED → 3×3 inertia tensors
+                    'COM',     [0.5 0 0; 0.5 0 0], ...   % REQUIRED → centre of mass rows
+                    'DH',      DH, ...              % REQUIRED → DH param struct
+                    'Fv',      [0.05 0.07], ...     % OPTIONAL → viscous friction (Nm·s/rad)
+                    'Fc',      [0.20 0.15]);        % OPTIONAL → Coulomb  friction (Nm)
+
+% Omit any optional field you don’t need – defaults are sensible.
 ```
 
 ---
@@ -82,11 +69,11 @@ Dyn = DynStruct('Mass',    [1 1], ...
 ```matlab
 kin = ManipulatorKinematics(DH);
 
-% Forward kinematics – pose(x,y,z,φ,θ,ψ)
+% Forward kinematics – pose(x, y, z, φ, θ, ψ)
 pose_sym = kin.CalculateFK();
 
 % Function handle – fast numerical evaluation
-fk = kin.CalculateFK('Return','handle');
+fk = kin.CalculateFK('Return', 'handle');
 pose_num = fk([pi/3; pi/6]);
 
 % Geometric Jacobian
@@ -103,6 +90,12 @@ kin.Jacobian('Generate','mex','File','myJac');         % creates compiled MEX
 ```matlab
 dyn = ManipulatorDynamics(Dyn);
 
+% Custom gravity direction?  Just pass the vector to the constructor:
+dyn_g = ManipulatorDynamics(Dyn, 'Gravity', [0 -9.81 0]); % y-axis gravity
+
+% Friction-aware dynamics
+dyn_fric = ManipulatorDynamics(DynFric);
+
 B  = dyn.MassMatrix();                 % symbolic
 C  = dyn.Coriolis();
 g  = dyn.Gravity();
@@ -113,6 +106,18 @@ Cf = dyn.Coriolis  ('Return','handle');
 gf = dyn.Gravity   ('Return','handle');
 
 B_num = Bf([pi/3;pi/6]);
+
+%% ODE right-hand side (full state dynamics)
+ode = dyn.ODEFunction();           % @(t,x,tau) → [q̇; q̈]
+
+% Zero-input simulation for 5 s
+tau = @(t)[0;0];                   % user-defined torque function
+x0  = [pi/3; pi/6; 0; 0];          % [q; q̇] initial state
+[tSim, xSim] = ode45(@(t,x) ode(t, x, tau(t)), [0 5], x0);
+
+plot(tSim, xSim(:,1:2));
+title('Joint positions vs time');
+legend('q_1','q_2'); grid on;
 ```
 Export ready-to-run code in one line:
 ```matlab
