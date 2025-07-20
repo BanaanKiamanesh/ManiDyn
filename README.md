@@ -1,4 +1,4 @@
-****# ManiDyn
+# ManiDyn
 
 A **MATLAB®** toolbox for symbolic modelling of serial-link robot **Manipulators**.  
 ManiDyn lets you move seamlessly from high-level geometric descriptions (DH parameters) to
