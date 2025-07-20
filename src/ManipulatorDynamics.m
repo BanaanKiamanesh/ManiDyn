@@ -1,3 +1,54 @@
+%MANIPULATORDYNAMICS Derives manipulator dynamics terms from physical parameters.
+%   This class computes the terms of the standard manipulator dynamics
+%   equation: B(q)q_dd + C(q, qd)qd + g(q) = tau, where:
+%     - B(q) is the n-by-n mass matrix.
+%     - C(q, qd) is the n-by-n Coriolis and centrifugal effects matrix.
+%     - g(q) is the n-by-1 gravity vector.
+%     - q, qd, q_dd are the joint position, velocity, and acceleration vectors.
+%     - tau is the vector of joint torques/forces.
+%
+%   The dynamics are derived symbolically using the Lagrangian formulation.
+%   The class can return these terms as symbolic expressions, function
+%   handles, or generate M-files, C-code, or MEX files for performance.
+%
+%   MANIPULATORDYNAMICS Properties (Access = private):
+%       Par - Structure containing the manipulator's dynamic parameters.
+%       g0  - Gravity acceleration vector.
+%       B   - Symbolic mass matrix.
+%       C   - Symbolic Coriolis/centrifugal matrix.
+%       g   - Symbolic gravity vector.
+%       q   - Symbolic joint variable vector.
+%       qd  - Symbolic joint velocity vector.
+%
+%   MANIPULATORDYNAMICS Methods:
+%       ManipulatorDynamics - Constructor for the class.
+%       MassMatrix          - Returns the mass matrix B(q).
+%       Coriolis            - Returns the Coriolis matrix C(q, qd).
+%       Gravity             - Returns the gravity vector g(q).
+%
+%   Example:
+%       % Define DH parameters for a 2-link planar robot using DHStruct
+%       dhParams = DHStruct('alpha', [0, 0], 'a', [1, 1], 'd', [0, 0], ...
+%                           'theta', [0, 0], 'type', 'rr');
+%
+%       % Define dynamic parameters using DynStruct
+%       dynParams = DynStruct('Mass'   , [1, 1], ...
+%                             'Inertia', {zeros(3), zeros(3)}, ...
+%                             'COM'    , [0.5 0 0; 0.5 0 0], ...
+%                             'DH'     , dhParams);
+%
+%       % Create dynamics object
+%       dyn = ManipulatorDynamics(dynParams);
+%
+%       % Get a function handle for the mass matrix
+%       B_fun = dyn.MassMatrix('Return', 'handle');
+%
+%       % Evaluate for a given joint configuration
+%       q_vals = [pi/4; pi/2];
+%       B_val = B_fun(q_vals);
+%
+%   See also: ManipulatorKinematics, DynStruct, DHStruct.
+
 classdef ManipulatorDynamics < handle
     properties (Access = private)
         Par
@@ -15,6 +66,43 @@ classdef ManipulatorDynamics < handle
     methods
         % ───────────────────────── Constructor ─────────────────────────
         function obj = ManipulatorDynamics(DynPar, opts)
+            %MANIPULATORDYNAMICS Construct an instance of the class.
+            %   OBJ = MANIPULATORDYNAMICS(DynPar) creates a dynamics model
+            %   object from the dynamic parameters specified in the DynPar struct.
+            %
+            %   OBJ = MANIPULATORDYNAMICS(DynPar, 'Gravity', G) specifies a
+            %   custom gravity vector G as a 1x3 array, e.g., [0, 0, -9.81].
+            %
+            %   Input Arguments:
+            %       DynPar - A structure containing the required dynamic
+            %                parameters for the manipulator. It must contain
+            %                the following fields:
+            %           .Mass   - 1-by-n vector of link masses.
+            %           .Inertia- 1-by-n cell array, where each cell contains a
+            %                     3-by-3 inertia tensor for a link, defined in
+            %                     its own frame.
+            %           .COM    - n-by-3 matrix where each row is the center of
+            %                     mass [x,y,z] for a link, defined in its own frame.
+            %           .DH     - A struct containing Denavit-Hartenberg parameters,
+            %                     compatible with the ManipulatorKinematics class.
+            %                     It must have fields: alpha, a, d, theta, type.
+            %
+            %       'Gravity' - (Optional name-value pair) A 1x3 vector specifying the
+            %                   gravity acceleration [gx, gy, gz].
+            %                   Default: [0, 0, -9.80665].
+            %
+            %   Output Arguments:
+            %       OBJ - The created ManipulatorDynamics object.
+            %
+            %   Throws:
+            %       ManipulatorDynamics:MissingField - If DynPar is missing
+            %                                          required fields.
+            %       ManipulatorDynamics:BadInertia   - If the Inertia cell
+            %                                          array is malformed.
+            %       ManipulatorDynamics:BadDH        - If the DH struct is
+            %                                          malformed.
+            %       ManipulatorDynamics:SizeMismatch - If DH parameter vectors
+            %                                          have inconsistent lengths.
             arguments
                 DynPar (1, 1) struct
                 opts.Gravity (1, 3) double = [0, 0, -9.80665]
@@ -25,7 +113,7 @@ classdef ManipulatorDynamics < handle
             missing = req(~isfield(DynPar, req));
             if ~isempty(missing)
                 error('ManipulatorDynamics:MissingField', ...
-                      'DynPar missing required field(s): %s', strjoin(missing, ', '));
+                    'DynPar missing required field(s): %s', strjoin(missing, ', '));
             end
             nLinks = numel(DynPar.Mass);
             if ~iscell(DynPar.Inertia) ...
@@ -47,7 +135,7 @@ classdef ManipulatorDynamics < handle
                 if isfield(DynPar, opt{k}) && ~isempty(DynPar.(opt{k})) ...
                         && numel(DynPar.(opt{k})) ~= nLinks
                     error('ManipulatorDynamics:SizeMismatch', ...
-                          '%s must have %d elements.', opt{k}, nLinks);
+                        '%s must have %d elements.', opt{k}, nLinks);
                 end
             end
             obj.Par = orderfields(DynPar);
@@ -56,14 +144,107 @@ classdef ManipulatorDynamics < handle
 
         % ───────────────────── Public Getters ──────────────────────────
         function B = MassMatrix(obj, varargin)
+            %MASSMATRIX Returns the manipulator mass matrix B(q).
+            %   B = MASSMATRIX(OBJ) returns the n-by-n symbolic mass matrix B(q).
+            %
+            %   B = MASSMATRIX(OBJ, 'Return', 'handle') returns a function handle
+            %   B_fun = @(q) ... that evaluates the mass matrix for a given
+            %   n-by-1 joint state vector q.
+            %
+            %   MASSMATRIX(OBJ, 'Generate', 'mfile'/'ccode'/'mex', 'File', FILENAME)
+            %   generates files for the symbolic expression.
+            %
+            %   Input Arguments:
+            %       OBJ - A ManipulatorDynamics object.
+            %
+            %   Name-Value Pair Arguments:
+            %       'Return' - Specifies the return type.
+            %           "symbolic" (default): Returns a symbolic matrix.
+            %           "handle"  : Returns a function handle.
+            %
+            %       'Generate' - Generates a file from the symbolic expression.
+            %           "none"    (default): No file is generated.
+            %           "mfile"   : Generates a MATLAB function (.m).
+            %           "ccode"   : Generates a C code file (.c).
+            %           "mex"     : Generates a compiled MEX function.
+            %
+            %       'File' - Specifies the base filename for the generated file.
+            %                Default: "dynamics".
+            %
+            %   Output Arguments:
+            %       B - The mass matrix, either as a sym or function_handle.
+            %
+            %   See also: Coriolis, Gravity.
             obj.BuildDynamics;
             B = obj.ReturnFormat(obj.B, 'B', varargin{:});
         end
         function C = Coriolis(obj, varargin)
+            %CORIOLIS Returns the manipulator Coriolis and centrifugal matrix C(q, qd).
+            %   C = CORIOLIS(OBJ) returns the n-by-n symbolic Coriolis matrix C(q, qd).
+            %
+            %   C = CORIOLIS(OBJ, 'Return', 'handle') returns a function handle
+            %   C_fun = @(q, qd) ... that evaluates the Coriolis matrix for a given
+            %   n-by-1 joint state vector q and joint velocity vector qd.
+            %
+            %   CORIOLIS(OBJ, 'Generate', 'mfile'/'ccode'/'mex', 'File', FILENAME)
+            %   generates files for the symbolic expression.
+            %
+            %   Input Arguments:
+            %       OBJ - A ManipulatorDynamics object.
+            %
+            %   Name-Value Pair Arguments:
+            %       'Return' - Specifies the return type.
+            %           "symbolic" (default): Returns a symbolic matrix.
+            %           "handle"  : Returns a function handle.
+            %
+            %       'Generate' - Generates a file from the symbolic expression.
+            %           "none"    (default): No file is generated.
+            %           "mfile"   : Generates a MATLAB function (.m).
+            %           "ccode"   : Generates a C code file (.c).
+            %           "mex"     : Generates a compiled MEX function.
+            %
+            %       'File' - Specifies the base filename for the generated file.
+            %                Default: "dynamics".
+            %
+            %   Output Arguments:
+            %       C - The Coriolis matrix, either as a sym or function_handle.
+            %
+            %   See also: MassMatrix, Gravity.
             obj.BuildDynamics;
             C = obj.ReturnFormat(obj.C, 'C', varargin{:});
         end
         function g = Gravity(obj, varargin)
+            %GRAVITY Returns the manipulator gravity vector g(q).
+            %   g = GRAVITY(OBJ) returns the n-by-1 symbolic gravity vector g(q).
+            %
+            %   g = GRAVITY(OBJ, 'Return', 'handle') returns a function handle
+            %   g_fun = @(q) ... that evaluates the gravity vector for a given
+            %   n-by-1 joint state vector q.
+            %
+            %   GRAVITY(OBJ, 'Generate', 'mfile'/'ccode'/'mex', 'File', FILENAME)
+            %   generates files for the symbolic expression.
+            %
+            %   Input Arguments:
+            %       OBJ - A ManipulatorDynamics object.
+            %
+            %   Name-Value Pair Arguments:
+            %       'Return' - Specifies the return type.
+            %           "symbolic" (default): Returns a symbolic vector.
+            %           "handle"  : Returns a function handle.
+            %
+            %       'Generate' - Generates a file from the symbolic expression.
+            %           "none"    (default): No file is generated.
+            %           "mfile"   : Generates a MATLAB function (.m).
+            %           "ccode"   : Generates a C code file (.c).
+            %           "mex"     : Generates a compiled MEX function.
+            %
+            %       'File' - Specifies the base filename for the generated file.
+            %                Default: "dynamics".
+            %
+            %   Output Arguments:
+            %       g - The gravity vector, either as a sym or function_handle.
+            %
+            %   See also: MassMatrix, Coriolis.
             obj.BuildDynamics;
             g = obj.ReturnFormat(obj.g, 'g', varargin{:});
         end
@@ -173,7 +354,7 @@ classdef ManipulatorDynamics < handle
                 switch gType
                     case "mfile"
                         matlabFunction(SymExpr, 'File', [valid '_' base], ...
-                                       'Vars', vars, 'Outputs', {char(base)});
+                            'Vars', vars, 'Outputs', {char(base)});
                         fprintf('MATLAB file "%s_%s.m" generated.\n', valid, base);
 
                     case "ccode"
@@ -188,11 +369,11 @@ classdef ManipulatorDynamics < handle
                         n = numel(obj.q);
                         if base == "C"
                             codegen(wrap, '-o', [valid '_' base], ...
-                                    '-args', {coder.typeof(0, [n 1], false), ...
-                                            coder.typeof(0, [n 1], false)});
+                                '-args', {coder.typeof(0, [n 1], false), ...
+                                coder.typeof(0, [n 1], false)});
                         else
                             codegen(wrap, '-o', [valid '_' base], ...
-                                    '-args', {coder.typeof(0, [n 1], false)});
+                                '-args', {coder.typeof(0, [n 1], false)});
                         end
                         delete([wrap '.m']);
                         fprintf('MEX file "%s_%s.%s" generated.\n', valid, base, mexext);

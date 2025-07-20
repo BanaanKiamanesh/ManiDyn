@@ -1,4 +1,48 @@
 function DynPar = DynStruct(varargin)
+    %DYNSTRUCT Creates a standardized structure for manipulator dynamic parameters.
+    %   DynPar = DYNSTRUCT('Mass', M, 'Inertia', I, 'COM', C, 'DH', DH_STRUCT)
+    %   creates a structure `DynPar` containing the parameters required for
+    %   dynamic analysis.
+    %
+    %   Input Arguments:
+    %       'Mass'    - A 1-by-n vector of the mass of each link.
+    %       'Inertia' - A 1-by-n cell array, where each cell contains the 3x3
+    %                   inertia tensor of a link with respect to its own frame.
+    %       'COM'     - An n-by-3 matrix where each row specifies the center of
+    %                   mass [x, y, z] for the corresponding link in its own frame.
+    %       'DH'      - A DH parameter structure, typically created by `DHStruct`.
+    %
+    %   Name-Value Pair Arguments:
+    %       'Length'  - (Optional) A 1-by-n vector of link lengths.
+    %       'Radius'  - (Optional) A 1-by-n vector of link radii.
+    %
+    %   Output Arguments:
+    %       DynPar - A structure containing the following fields:
+    %                .Mass    - (1xn double)
+    %                .Inertia - (1xn cell of 3x3 double)
+    %                .COM     - (nx3 double)
+    %                .DH      - (struct)
+    %                .Length  - (1xn double, optional)
+    %                .Radius  - (1xn double, optional)
+    %
+    %   Example:
+    %       % Define parameters for a single link
+    %       mass = 1;
+    %       inertia = eye(3);
+    %       com = [0.5, 0, 0];
+    %       dh = DHStruct('alpha',0,'a',1,'d',0,'theta',0,'type','r');
+    %
+    %       % Create the dynamics parameter structure
+    %       dyn_params = DynStruct('Mass', mass, 'Inertia', {inertia}, ...
+    %                              'COM', com, 'DH', dh);
+    %
+    %   Throws:
+    %       RobotStruct:MissingField - If a required field (Mass, Inertia, COM, DH)
+    %                                  is missing.
+    %       RobotStruct:SizeMismatch - If input arrays have inconsistent sizes.
+    %
+    %   See also: ManipulatorDynamics, DHStruct.
+
     % Function to Construct a Robot Dynamical Parameter Struct to be Used
     % in the Dynamics Calculation
 
@@ -29,7 +73,7 @@ function DynPar = DynStruct(varargin)
     if any([numel(R.DH.alpha), numel(R.DH.a), numel(R.DH.d), numel(R.DH.theta)] ~= nLinks)
         error('RobotStruct:SizeMismatch', 'DH lists must all have %d elements.', nLinks);
     end
-    
+
     optVecs = {'Length', 'Radius'};
     for k = 1:numel(optVecs)
         f = optVecs{k};
