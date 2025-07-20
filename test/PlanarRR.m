@@ -3,9 +3,6 @@ clear
 close all
 clc
 
-addpath '..\utils'
-addpath '..\src'
-
 %% Parameter Declaration
 L1 = 1.0;
 L2 = 0.7;
