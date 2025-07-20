@@ -135,8 +135,14 @@ The core symbolic methods can produce results in several forms via the `Return` 
 | `MassMatrix`   | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `Coriolis`     | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `Gravity`      | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `ODEFunction` | ✓ | ✓ | ✓ | ✗ | ✓ |
 
 Every generated file/function encodes the exact same symbolic expression, so you can mix-and-match formats depending on performance and deployment needs.
+
+> **`ODEFunction` generation rules**  
+> • `'Generate','mfile'` — all helpers **and** the ODE driver are plain `.m` files.  
+> • `'Generate','mex'`   — the mass-matrix, Coriolis and gravity helpers are compiled **MEX** binaries while the ODE driver remains a slim `.m` file that calls them.  
+> • `'Generate','ccode'` is **not supported** for `ODEFunction`.
 
 ---
 ## Inverse Kinematics Utilities
