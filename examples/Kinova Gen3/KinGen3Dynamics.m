@@ -69,9 +69,11 @@ kin.CalculateFK('Rows', 1:6, 'Generate', 'mfile', 'File', 'gen3_fk');
 kin.Jacobian('Type', 'geometric' , 'Generate', 'mfile', 'File', 'gen3_jac_geo');
 kin.Jacobian('Type', 'analytical', 'Generate', 'mfile', 'File', 'gen3_jac_ana');
 
-dyn.MassMatrix('Generate', 'mfile', 'File', 'gen3_dyn');
-dyn.Coriolis  ('Generate', 'mfile', 'File', 'gen3_dyn');
-dyn.Gravity   ('Generate', 'mfile', 'File', 'gen3_dyn');
+dyn.MassMatrix ('Generate', 'mfile', 'File', 'gen3_dyn');
+dyn.Coriolis   ('Generate', 'mfile', 'File', 'gen3_dyn');
+dyn.Gravity    ('Generate', 'mfile', 'File', 'gen3_dyn');
+dyn.ODEFunction('Generate', 'mfile', 'File', 'gen3_dyn');
+
 
 fprintf('\nCode Generation Complete!\n');
 
