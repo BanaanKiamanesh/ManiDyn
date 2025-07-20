@@ -262,78 +262,178 @@ classdef ManipulatorDynamics < handle
         % ───────────────────── ODE Function Builder ──────────────────────
         function odeFun = ODEFunction(obj, varargin)
             %ODEFUNCTION Build a full-state ODE function for numerical solvers.
-            %   F = ODEFUNCTION(OBJ) returns a function handle compatible with
-            %   MATLAB ODE solvers (e.g., ode45). The handle has the form
-            %       F = @(t, x, tau) x_dot
-            %   where the state vector x = [q; qd] stacks joint positions q and
-            %   joint velocities qd, and tau is the n-by-1 vector of joint input
-            %   torques/forces.  Internally the acceleration is solved from
-            %
-            %       B(q)q̈ = τ − C(q, q̇)q̇ − Fv q̇ − Fc·sgn(q̇) − g(q)
-            %
-            %   with Fv = diag(Viscous Friction Coefficients) and
-            %   Fc = diag(Coulomb Friction Coefficients).  Both friction vectors
-            %   are optional and default to zero if not provided in the
-            %   `DynStruct`.
-            %
-            %   The output x_dot = [q̇; q̈].
-            %
-            %   Name-Value Pair Arguments:
-            %       'Return'  – "handle" (default) | "symbolic"
-            %           "handle"  – Return a function handle.
-            %           "symbolic" – Return the symbolic expression of x_dot.
-            %
-            %       'Generate' – "none" (default) | "mfile" | "mex"
-            %           Optionally generate a MATLAB file or compiled MEX file.
-            %
-            %       'File' – Base file name for code generation (default "ode").
-            %
-            %   Example:
-            %       dyn = ManipulatorDynamics(dynPar);
-            %       ode = dyn.ODEFunction();
-            %       tauFun = @(t)[sin(t); cos(t)];
-            %       [t, y] = ode45(@(t, y) ode(t, y, tauFun(t)), [0 10], zeros(2*n,1));
-            %
-            %   See also: ode45, ode15s, MassMatrix, Coriolis, Gravity.
+            %   Modified to compute the right-hand side numerically using the
+            %   evaluated system matrices to avoid expensive symbolic matrix
+            %   inversion.  The default return type is a function handle.
+            %------------------------------------------------------------------
+            % Parse options ----------------------------------------------------
+            retType  = "handle";   % default return
+            genType  = "none";     % default no file generation
+            fileBase = "ode";      % default base name for generated files
+            for k = 1:2:numel(varargin)
+                switch lower(string(varargin{k}))
+                    case "return"
+                        retType = lower(string(varargin{k+1}));
+                    case "generate"
+                        genType = lower(string(varargin{k+1}));
+                    case "file"
+                        fileBase = char(varargin{k+1});
+                end
+            end
+
+            if genType == "ccode"
+                error('ODEFunction:GenerateUnsupported', 'Generation type "ccode" is not supported for ODEFunction.');
+            end
+
+            % Ensure a valid MATLAB function name base (used for generated helpers)
+            validBase = char(matlab.lang.makeValidName(fileBase));
 
             % Ensure dynamics are available
             obj.BuildDynamics;
             n = numel(obj.Par.Mass);
 
-            % -- Symbolic vector field -------------------------------------------
-            x   = sym('x', [2*n 1], 'real');
-            q   = x(1:n);          % positions
-            qd  = x(n+1:end);      % velocities
-            tau = sym('tau', [n 1], 'real');
-            t   = sym('t', 'real'); %#ok<NASGU>
+            % ------------------------------------------------------------------
+            % SYMBOLIC PATH (keeps legacy behaviour) ---------------------------
+            if retType == "symbolic"
+                x   = sym('x', [2*n 1], 'real');
+                q   = x(1:n);
+                qd  = x(n+1:end);
+                tau = sym('tau', [n 1], 'real');
+                t   = sym('t', 'real'); %#ok<NASGU>
 
-            Bq = subs(obj.B,  obj.q,  q);
+                Bq = subs(obj.B,  obj.q,  q);
 
-            % --- Friction Vectors ------------------------------------
+                % Friction vectors
+                if isfield(obj.Par, 'Fv') && ~isempty(obj.Par.Fv)
+                    fvVec = sym(obj.Par.Fv(:));
+                else
+                    fvVec = sym(zeros(n,1));
+                end
+                if isfield(obj.Par, 'Fc') && ~isempty(obj.Par.Fc)
+                    fcVec = sym(obj.Par.Fc(:));
+                else
+                    fcVec = sym(zeros(n,1));
+                end
+
+                gq = subs(obj.g,  obj.q,  q);
+                Cq = subs(obj.C, [obj.q; obj.qd], [q; qd]);
+
+                frictionTerm = fvVec.*qd + fcVec.*sign(qd);
+                qdd      = Bq \ (tau - Cq*qd - frictionTerm - gq);
+                xdotSym  = [qd; qdd];
+
+                HasReturn = any(strcmpi(varargin(1:2:end), 'Return'));
+                ExtraArgs = {};
+                if ~HasReturn, ExtraArgs = {'Return', 'symbolic'}; end
+
+                odeFun = obj.ReturnFormat(xdotSym, 'x_dot', varargin{:}, ExtraArgs{:}, ...
+                    'Vars', {t, x, tau}, 'Output', 'x_dot');
+
+                % Optional code generation requests (apply same rules)
+                switch genType
+                    case "none"
+                        % nothing to do
+                    case "mfile"
+                        obj.MassMatrix('Generate', 'mfile', 'File', validBase);
+                        obj.Coriolis ('Generate', 'mfile', 'File', validBase);
+                        obj.Gravity  ('Generate', 'mfile', 'File', validBase);
+                        writeOdeFile("mfile");
+                    case "mex"
+                        obj.MassMatrix('Generate', 'mex', 'File', validBase);
+                        obj.Coriolis ('Generate', 'mex', 'File', validBase);
+                        obj.Gravity  ('Generate', 'mex', 'File', validBase);
+                        writeOdeFile("mex");
+                    otherwise
+                        % 'ccode' already filtered earlier
+                        error('ODEFunction:GenerateUnsupported', ...
+                            'Generation type "%s" not supported for symbolic ODE.', genType);
+                end
+                return
+            end
+
+            % ------------------------------------------------------------------
+            % NUMERIC HANDLE PATH ----------------------------------------------
+            % Build function handles for the system matrices
+            B_fun = obj.MassMatrix('Return', 'handle');
+            C_fun = obj.Coriolis('Return', 'handle');
+            g_fun = obj.Gravity ('Return', 'handle');
+
+            % Friction vectors (numeric)
             if isfield(obj.Par, 'Fv') && ~isempty(obj.Par.Fv)
-                fvVec = sym(obj.Par.Fv(:));
+                fvVec = obj.Par.Fv(:);
             else
-                fvVec = sym(zeros(n,1));
+                fvVec = zeros(n,1);
             end
             if isfield(obj.Par, 'Fc') && ~isempty(obj.Par.Fc)
-                fcVec = sym(obj.Par.Fc(:));
+                fcVec = obj.Par.Fc(:);
             else
-                fcVec = sym(zeros(n,1));
+                fcVec = zeros(n,1);
             end
 
-            gq = subs(obj.g,  obj.q,  q);
-            Cq = subs(obj.C, [obj.q; obj.qd], [q; qd]);
+            % Create numeric ODE handle
+            odeFun = @(t, x, tau) local_ode(t, x, tau, B_fun, C_fun, g_fun, fvVec, fcVec);
 
-            frictionTerm = fvVec.*qd + fcVec.*sign(qd);
-            qdd      = Bq \ (tau - Cq*qd - frictionTerm - gq);
-            xdotSym  = [qd; qdd];
+            % Optional MATLAB file generation for the numeric path
+            switch genType
+                case "none"
+                    % Do nothing
+                case "mfile"
+                    % Ensure auxiliary system matrix files exist (M-files)
+                    obj.MassMatrix('Generate', 'mfile', 'File', validBase);
+                    obj.Coriolis ('Generate', 'mfile', 'File', validBase);
+                    obj.Gravity  ('Generate', 'mfile', 'File', validBase);
 
-            HasReturn = any(strcmpi(varargin(1:2:end), 'Return'));
-            ExtraArgs = {};
-            if ~HasReturn, ExtraArgs = {'Return', 'handle'}; end
+                    writeOdeFile("mfile");
+                case "mex"
+                    % Generate auxiliary system matrices as mex files
+                    obj.MassMatrix('Generate', 'mex', 'File', validBase);
+                    obj.Coriolis ('Generate', 'mex', 'File', validBase);
+                    obj.Gravity  ('Generate', 'mex', 'File', validBase);
 
-            odeFun = obj.ReturnFormat(xdotSym, 'x_dot', varargin{:}, ExtraArgs{:}, ...
-                'Vars', {t, x, tau}, 'Output', 'x_dot');
+                    % ODE remains a plain .m file that calls the mex functions
+                    writeOdeFile("mex");
+                otherwise
+                    error('ODEFunction:GenerateUnsupported', ...
+                        'Generation type "%s" not supported for numeric ODE.', genType);
+            end
+
+            % ----------------------- helper writers ----------------------------
+            function writeOdeFile(mode)
+                % mode is "mfile" or "mex" (affects comment only)
+                fid = fopen([validBase '.m'], 'w');
+                fprintf(fid, 'function x_dot = %s(t, x, tau)\n', validBase);
+                fprintf(fid, '%% Auto-generated numeric ODE function by ManipulatorDynamics.\n');
+                if mode == "mex"
+                    fprintf(fid, '%% Uses compiled mex helpers for B, C, g.\n');
+                end
+                fprintf(fid, 'n = %d;\n', n);
+                fprintf(fid, 'q  = x(1:n);\n');
+                fprintf(fid, 'qd = x(n+1:end);\n');
+                fprintf(fid, 'B  = %s_B(q);\n', validBase);
+                fprintf(fid, 'C  = %s_C(q, qd);\n', validBase);
+                fprintf(fid, 'g  = %s_g(q);\n', validBase);
+                fvNumeric = double(fvVec);
+                fcNumeric = double(fcVec);
+                fvStr = sprintf('%.15g ', fvNumeric);
+                fcStr = sprintf('%.15g ', fcNumeric);
+                fprintf(fid, 'fv = [%s]'';\n', strtrim(fvStr));
+                fprintf(fid, 'fc = [%s]'';\n', strtrim(fcStr));
+                fprintf(fid, 'friction = fv.*qd + fc.*sign(qd);\n');
+                fprintf(fid, 'qdd = B \\ (tau - C*qd - friction - g);\n');
+                fprintf(fid, 'x_dot = [qd; qdd];\n');
+                fprintf(fid, 'end\n');
+                fclose(fid);
+                fprintf('MATLAB file "%s.m" generated.\n', validBase);
+            end
+
+            % ----------------------- nested helper -----------------------------
+            function xdot = local_ode(~, x, tau, Bf, Cf, gf, fv, fc)
+                q  = x(1:n);
+                qd = x(n+1:end);
+                friction = fv.*qd + fc.*sign(qd);
+                qdd = Bf(q) \ (tau - Cf(q, qd)*qd - friction - gf(q));
+                xdot = [qd; qdd];
+            end
         end
     end
 
