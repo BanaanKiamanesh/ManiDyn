@@ -15,6 +15,8 @@ function DynPar = DynStruct(varargin)
     %   Name-Value Pair Arguments:
     %       'Length'  - (Optional) A 1-by-n vector of link lengths.
     %       'Radius'  - (Optional) A 1-by-n vector of link radii.
+    %       'Fv'      - (Optional) A 1-by-n vector of viscous friction coefficients (N·m·s/rad).
+    %       'Fc'      - (Optional) A 1-by-n vector of Coulomb friction coefficients (N·m).
     %
     %   Output Arguments:
     %       DynPar - A structure containing the following fields:
@@ -24,6 +26,8 @@ function DynPar = DynStruct(varargin)
     %                .DH      - (struct)
     %                .Length  - (1xn double, optional)
     %                .Radius  - (1xn double, optional)
+    %                .Fv      - (1xn double, optional)
+    %                .Fc      - (1xn double, optional)
     %
     %   Example:
     %       % Define parameters for a single link
@@ -52,6 +56,8 @@ function DynPar = DynStruct(varargin)
     addParameter(Parser, 'Mass'   , [], @(x)isnumeric(x) && isvector(x));
     addParameter(Parser, 'Length' , [], @(x)isnumeric(x) && isvector(x));
     addParameter(Parser, 'Radius' , [], @(x)isnumeric(x) && isvector(x));
+    addParameter(Parser, 'Fv'    , [], @(x)isnumeric(x) && isvector(x));
+    addParameter(Parser, 'Fc'    , [], @(x)isnumeric(x) && isvector(x));
     addParameter(Parser, 'Inertia', [], @(x)iscell(x) && all(cellfun(@(c)isequal(size(c), [3 3]), x)));
     addParameter(Parser, 'COM'    , [], @(x)isnumeric(x) && size(x,2) == 3);
     addParameter(Parser, 'DH'     , [], @(s)isstruct(s) && all(isfield(s, {'alpha', 'a', 'd', 'theta'})));
@@ -75,11 +81,20 @@ function DynPar = DynStruct(varargin)
     end
 
     optVecs = {'Length', 'Radius'};
+    optVecs = [optVecs, {'Fv', 'Fc'}];
     for k = 1:numel(optVecs)
         f = optVecs{k};
         if ~isempty(R.(f)) && numel(R.(f)) ~= nLinks
             error('RobotStruct:SizeMismatch', '%s must have %d elements.', f, nLinks);
         end
+    end
+
+    % Default zero friction if not provided
+    if isempty(R.Fv)
+        R.Fv = zeros(1, nLinks);
+    end
+    if isempty(R.Fc)
+        R.Fc = zeros(1, nLinks);
     end
 
     % Verify COM Size (n×3)
@@ -92,6 +107,8 @@ function DynPar = DynStruct(varargin)
         'Mass'   , R.Mass(:).', ...
         'Length' , R.Length(:).', ...
         'Radius' , R.Radius(:).', ...
+        'Fv'     , R.Fv(:).', ...
+        'Fc'     , R.Fc(:).', ...
         'Inertia', {R.Inertia}, ...
         'COM'    , R.COM, ...
         'DH'     , R.DH ));

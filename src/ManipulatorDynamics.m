@@ -1,6 +1,7 @@
 %MANIPULATORDYNAMICS Derives manipulator dynamics terms from physical parameters.
 %   This class computes the terms of the standard manipulator dynamics
-%   equation: B(q)q_dd + C(q, qd)qd + g(q) = tau, where:
+%
+%   equation: B(q)q_dd + C(q, qd)qd + Fv qd + Fc sgn(qd) + g(q) = tau, where:
 %     - B(q) is the n-by-n mass matrix.
 %     - C(q, qd) is the n-by-n Coriolis and centrifugal effects matrix.
 %     - g(q) is the n-by-1 gravity vector.
@@ -14,6 +15,8 @@
 %   MANIPULATORDYNAMICS Properties (Access = private):
 %       Par - Structure containing the manipulator's dynamic parameters.
 %       g0  - Gravity acceleration vector.
+%       Fv  - Diagonal matrix of viscous friction coefficients.
+%       Fc  - Diagonal matrix of Coulomb friction coefficients.
 %       B   - Symbolic mass matrix.
 %       C   - Symbolic Coriolis/centrifugal matrix.
 %       g   - Symbolic gravity vector.
@@ -137,7 +140,7 @@ classdef ManipulatorDynamics < handle
                     numel(DynPar.DH.type)] ~= nLinks)
                 error('ManipulatorDynamics:SizeMismatch', 'DH vectors wrong length.');
             end
-            opt = {'Length', 'Radius'};
+            opt = {'Length', 'Radius', 'Fv', 'Fc'};
             for k = 1:numel(opt)
                 if isfield(DynPar, opt{k}) && ~isempty(DynPar.(opt{k})) ...
                         && numel(DynPar.(opt{k})) ~= nLinks
@@ -264,7 +267,16 @@ classdef ManipulatorDynamics < handle
             %       F = @(t, x, tau) x_dot
             %   where the state vector x = [q; qd] stacks joint positions q and
             %   joint velocities qd, and tau is the n-by-1 vector of joint input
-            %   torques/forces. The output x_dot = [qd; qdd].
+            %   torques/forces.  Internally the acceleration is solved from
+            %
+            %       B(q)q̈ = τ − C(q, q̇)q̇ − Fv q̇ − Fc·sgn(q̇) − g(q)
+            %
+            %   with Fv = diag(Viscous Friction Coefficients) and
+            %   Fc = diag(Coulomb Friction Coefficients).  Both friction vectors
+            %   are optional and default to zero if not provided in the
+            %   `DynStruct`.
+            %
+            %   The output x_dot = [q̇; q̈].
             %
             %   Name-Value Pair Arguments:
             %       'Return'  – "handle" (default) | "symbolic"
@@ -296,10 +308,24 @@ classdef ManipulatorDynamics < handle
             t   = sym('t', 'real'); %#ok<NASGU>
 
             Bq = subs(obj.B,  obj.q,  q);
+
+            % --- Friction Vectors ------------------------------------
+            if isfield(obj.Par, 'Fv') && ~isempty(obj.Par.Fv)
+                fvVec = sym(obj.Par.Fv(:));
+            else
+                fvVec = sym(zeros(n,1));
+            end
+            if isfield(obj.Par, 'Fc') && ~isempty(obj.Par.Fc)
+                fcVec = sym(obj.Par.Fc(:));
+            else
+                fcVec = sym(zeros(n,1));
+            end
+
             gq = subs(obj.g,  obj.q,  q);
             Cq = subs(obj.C, [obj.q; obj.qd], [q; qd]);
 
-            qdd      = Bq \ (tau - Cq*qd - gq);
+            frictionTerm = fvVec.*qd + fcVec.*sign(qd);
+            qdd      = Bq \ (tau - Cq*qd - frictionTerm - gq);
             xdotSym  = [qd; qdd];
 
             HasReturn = any(strcmpi(varargin(1:2:end), 'Return'));

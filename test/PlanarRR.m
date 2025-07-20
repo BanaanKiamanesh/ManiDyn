@@ -192,7 +192,7 @@ ODE_mfile = @PlanarRR_ode_x_dot;
 % Zero-Input Simulation for 10 s
 x0 = [q_num; 0; 0];
 Tau = @(t) zeros(2, 1);
-[tSim, xSim] = ode45(@(t, x) ODE_fun(t, x, Tau(t)), [0 10], x0);
+[tSim, xSim] = ode45(@(t, x) ODE_fun(t, x, Tau(t)), [0 100], x0);
 
 figure('Name', 'PlanarRR Zero-Input Response');
 subplot(2, 1, 1);
@@ -207,6 +207,38 @@ grid on;
 legend('q1dot', 'q2dot');
 xlabel('Time [s]');
 ylabel('Velocity [rad/s]');
+
+%% Friction Influence Comparison
+% Simulate the same system with viscous and Coulomb joint frictions to
+% highlight their impact versus the friction-free baseline.
+
+FvSample = [0.05, 0.05];    % N·m·s/rad
+FcSample = [0.1 , 0.08];    % N·m
+
+DynParFric = DynStruct('Mass', M, 'Length', L, 'Radius', R, ...
+    'Inertia', I, 'DH', DH, 'COM', COM, ...
+    'Fv', FvSample, 'Fc', FcSample);
+
+MD_fric  = ManipulatorDynamics(DynParFric, 'Gravity', [0, -9.81, 0]);
+ODE_fric = MD_fric.ODEFunction;
+
+[tF, xF] = ode45(@(t, x) ODE_fric(t, x, Tau(t)), [0 100], x0);
+
+% Overlay comparison
+figure('Name', 'Friction vs No-Friction Response');
+subplot(2, 1, 1);
+plot(tSim, xSim(:, 1), 'b-', tF, xF(:, 1), 'r--', ...
+    tSim, xSim(:, 2), 'b-.', tF, xF(:, 2), 'r:');
+grid on;
+legend('q1 (no fric)', 'q1 (fric)', 'q2 (no fric)', 'q2 (fric)');
+ylabel('Position [rad]');
+
+subplot(2, 1, 2);
+plot(tSim, xSim(:, 3), 'b-', tF, xF(:, 3), 'r--', ...
+    tSim, xSim(:, 4), 'b-.', tF, xF(:, 4), 'r:');
+grid on;
+legend('q1dot (no fric)', 'q1dot (fric)', 'q2dot (no fric)', 'q2dot (fric)');
+xlabel('Time [s]'); ylabel('Velocity [rad/s]');
 
 %% Performance Benchmark
 fprintf('\n =====  Performance Benchmark (1000 evaluations)  ===== \n');
