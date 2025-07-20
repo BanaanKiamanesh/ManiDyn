@@ -25,6 +25,7 @@
 %       MassMatrix          - Returns the mass matrix B(q).
 %       Coriolis            - Returns the Coriolis matrix C(q, qd).
 %       Gravity             - Returns the gravity vector g(q).
+%       ODEFunction         - Builds a full-state ODE rhs for simulation.
 %
 %   Example:
 %       % Define DH parameters for a 2-link planar robot using DHStruct
@@ -40,12 +41,18 @@
 %       % Create dynamics object
 %       dyn = ManipulatorDynamics(dynParams);
 %
-%       % Get a function handle for the mass matrix
+%       % Mass matrix as function handle
 %       B_fun = dyn.MassMatrix('Return', 'handle');
 %
 %       % Evaluate for a given joint configuration
 %       q_vals = [pi/4; pi/2];
 %       B_val = B_fun(q_vals);
+%
+%       % Build ODE rhs for simulation (zero input)
+%       ode = dyn.ODEFunction();
+%       x0  = [q_vals; zeros(2,1)];
+%       tau = @(t) zeros(2,1);
+%       [t,y] = ode45(@(t,x) ode(t,x,tau(t)), [0 10], x0);
 %
 %   See also: ManipulatorKinematics, DynStruct, DHStruct.
 
@@ -248,6 +255,60 @@ classdef ManipulatorDynamics < handle
             obj.BuildDynamics;
             g = obj.ReturnFormat(obj.g, 'g', varargin{:});
         end
+
+        % ───────────────────── ODE Function Builder ──────────────────────
+        function odeFun = ODEFunction(obj, varargin)
+            %ODEFUNCTION Build a full-state ODE function for numerical solvers.
+            %   F = ODEFUNCTION(OBJ) returns a function handle compatible with
+            %   MATLAB ODE solvers (e.g., ode45). The handle has the form
+            %       F = @(t, x, tau) x_dot
+            %   where the state vector x = [q; qd] stacks joint positions q and
+            %   joint velocities qd, and tau is the n-by-1 vector of joint input
+            %   torques/forces. The output x_dot = [qd; qdd].
+            %
+            %   Name-Value Pair Arguments:
+            %       'Return'  – "handle" (default) | "symbolic"
+            %           "handle"  – Return a function handle.
+            %           "symbolic" – Return the symbolic expression of x_dot.
+            %
+            %       'Generate' – "none" (default) | "mfile" | "mex"
+            %           Optionally generate a MATLAB file or compiled MEX file.
+            %
+            %       'File' – Base file name for code generation (default "ode").
+            %
+            %   Example:
+            %       dyn = ManipulatorDynamics(dynPar);
+            %       ode = dyn.ODEFunction();
+            %       tauFun = @(t)[sin(t); cos(t)];
+            %       [t, y] = ode45(@(t, y) ode(t, y, tauFun(t)), [0 10], zeros(2*n,1));
+            %
+            %   See also: ode45, ode15s, MassMatrix, Coriolis, Gravity.
+
+            % Ensure dynamics are available
+            obj.BuildDynamics;
+            n = numel(obj.Par.Mass);
+
+            % -- Symbolic vector field -------------------------------------------
+            x   = sym('x', [2*n 1], 'real');
+            q   = x(1:n);          % positions
+            qd  = x(n+1:end);      % velocities
+            tau = sym('tau', [n 1], 'real');
+            t   = sym('t', 'real'); %#ok<NASGU>
+
+            Bq = subs(obj.B,  obj.q,  q);
+            gq = subs(obj.g,  obj.q,  q);
+            Cq = subs(obj.C, [obj.q; obj.qd], [q; qd]);
+
+            qdd      = Bq \ (tau - Cq*qd - gq);
+            xdotSym  = [qd; qdd];
+
+            HasReturn = any(strcmpi(varargin(1:2:end), 'Return'));
+            ExtraArgs = {};
+            if ~HasReturn, ExtraArgs = {'Return', 'handle'}; end
+
+            odeFun = obj.ReturnFormat(xdotSym, 'x_dot', varargin{:}, ExtraArgs{:}, ...
+                'Vars', {t, x, tau}, 'Output', 'x_dot');
+        end
     end
 
     methods (Access = private)
@@ -332,51 +393,79 @@ classdef ManipulatorDynamics < handle
             addParameter(p, 'Return'  , "symbolic", @(s)isstring(s)||ischar(s));
             addParameter(p, 'Generate', "none"   , @(s)isstring(s)||ischar(s));
             addParameter(p, 'File'    , "dynamics", @(s)isstring(s)||ischar(s));
+            addParameter(p, 'Vars'    , {}, @(c)iscell(c));
+            addParameter(p, 'Output'  , "", @(s)isstring(s)||ischar(s));
             parse(p, varargin{:});
 
-            outTyp = lower(string(p.Results.Return));
-            gType  = lower(string(p.Results.Generate));
-            fBase  = char(p.Results.File);
+            OutType = lower(string(p.Results.Return));
+            gType   = lower(string(p.Results.Generate));
+            fBase   = char(p.Results.File);
+
+            vars    = p.Results.Vars;
+            if isempty(vars)
+                % Default variable list for the original three dynamics terms
+                vars = {obj.q};
+                if base == "C"
+                    vars = {obj.q, obj.qd};
+                end
+            end
+
+            OutName = char(p.Results.Output);
+            if isempty(OutName)
+                OutName = char(base);
+            end
 
             % ---- Return Type ------------------------------------------
-            switch outTyp
+            switch OutType
                 case "handle"
-                    vars = {obj.q}; if base == "C", vars={obj.q, obj.qd}; end
-                    out  = matlabFunction(SymExpr, 'Vars', vars, 'Outputs', {char(base)});
+                    out = matlabFunction(SymExpr, 'Vars', vars, 'Outputs', {OutName});
                 otherwise
-                    out  = SymExpr;
+                    out = SymExpr;
             end
 
             % ---- Optional Code Generation -----------------------------
             if gType ~= "none"
                 valid = matlab.lang.makeValidName(fBase);
-                vars  = {obj.q}; if base == "C", vars={obj.q, obj.qd}; end
                 switch gType
                     case "mfile"
-                        matlabFunction(SymExpr, 'File', [valid '_' base], ...
-                            'Vars', vars, 'Outputs', {char(base)});
-                        fprintf('MATLAB file "%s_%s.m" generated.\n', valid, base);
+                        matlabFunction(SymExpr, 'File', [valid '_' OutName], ...
+                            'Vars', vars, 'Outputs', {OutName});
+                        fprintf('MATLAB file "%s_%s.m" generated.\n', valid, OutName);
 
                     case "ccode"
-                        fid = fopen([valid '_' base '.c'], 'w');
-                        fprintf(fid, '/* %s generated by ManipulatorDynamics */\n', base);
-                        fprintf(fid, '%s', ccode(SymExpr)); fclose(fid);
-                        fprintf('C code "%s_%s.c" generated.\n', valid, base);
+                        fid = fopen([valid '_' OutName '.c'], 'w');
+                        fprintf(fid, '/* %s generated by ManipulatorDynamics */\n', OutName);
+                        if numel(SymExpr) == 1
+                            cstr = ccode(SymExpr);
+                        else
+                            cList = arrayfun(@(idx) ccode(SymExpr(idx)), 1:numel(SymExpr), 'UniformOutput', false);
+                            cstr  = strjoin(cList, "\n");
+                        end
+                        fprintf(fid, '%s', cstr);
+                        fclose(fid);
+                        fprintf('C code "%s_%s.c" generated.\n', valid, OutName);
 
                     case "mex"
-                        wrap = [valid '_' base '_wrap'];
-                        matlabFunction(SymExpr, 'File', wrap, 'Vars', vars, 'Outputs', {char(base)});
+                        % Generic dimension inference is non-trivial → support only
+                        % original B, C, g paths for now.
+                        if ~ismember(OutName, {'B','C','g'})
+                            error('ReturnFormat:MexUnsupported', ...
+                                'MEX generation not supported for output "%s".', OutName);
+                        end
+
+                        wrap = [valid '_' OutName '_wrap'];
+                        matlabFunction(SymExpr, 'File', wrap, 'Vars', vars, 'Outputs', {OutName});
                         n = numel(obj.q);
-                        if base == "C"
-                            codegen(wrap, '-o', [valid '_' base], ...
+                        if strcmp(OutName, 'C')
+                            codegen(wrap, '-o', [valid '_' OutName], ...
                                 '-args', {coder.typeof(0, [n 1], false), ...
                                 coder.typeof(0, [n 1], false)});
                         else
-                            codegen(wrap, '-o', [valid '_' base], ...
+                            codegen(wrap, '-o', [valid '_' OutName], ...
                                 '-args', {coder.typeof(0, [n 1], false)});
                         end
                         delete([wrap '.m']);
-                        fprintf('MEX file "%s_%s.%s" generated.\n', valid, base, mexext);
+                        fprintf('MEX file "%s_%s.%s" generated.\n', valid, OutName, mexext);
                 end
             end
         end
