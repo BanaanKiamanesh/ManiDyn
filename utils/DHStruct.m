@@ -42,17 +42,18 @@ function DH = DHStruct(varargin)
     %
     %   See also: ManipulatorKinematics, ManipulatorDynamics, ParseDH.
 
-    % Function to Construct a DH Parameter Struct to be Used Later
+
+    isNumOrSym = @(x) isnumeric(x) || isa(x,'sym');
 
     % Input Parsing
     Parser = inputParser;
     Parser.FunctionName = 'DHStruct';
-    addParameter(Parser, 'alpha'   ,         [], @(x)isnumeric(x) && isvector(x));
-    addParameter(Parser, 'a'       ,         [], @(x)isvector(x));
-    addParameter(Parser, 'd'       ,         [], @(x)isvector(x));
-    addParameter(Parser, 'theta'   ,         [], @(x)isnumeric(x) && isvector(x));
-    addParameter(Parser, 'type'    ,         [], @(x)(ischar(x) || isstring(x)) && isvector(x));
-    addParameter(Parser, 'notation', 'original', @(x)(ischar(x) || isstring(x)) && isvector(x));  % ◀ default added
+    addParameter(Parser, 'alpha'   , [], @(x) isvector(x) && isNumOrSym(x));
+    addParameter(Parser, 'a'       , [], @(x) isvector(x) && isNumOrSym(x));
+    addParameter(Parser, 'd'       , [], @(x) isvector(x) && isNumOrSym(x));
+    addParameter(Parser, 'theta'   , [], @(x) isvector(x) && isNumOrSym(x));
+    addParameter(Parser, 'type'    , [], @(x) (ischar(x) || isstring(x)) && isvector(x));
+    addParameter(Parser, 'notation', 'original', @(x) (ischar(x) || isstring(x)) && isvector(x));
     parse(Parser, varargin{:});
     R = Parser.Results;
 

@@ -47,20 +47,22 @@ function DynPar = DynStruct(varargin)
     %
     %   See also: ManipulatorDynamics, DHStruct.
 
-    % Function to Construct a Robot Dynamical Parameter Struct to be Used
-    % in the Dynamics Calculation
+
+    isNumOrSym = @(x) isnumeric(x) || isa(x,'sym');
 
     % Input Parsing
     Parser = inputParser;
     Parser.FunctionName = 'RobotStruct';
-    addParameter(Parser, 'Mass'   , [], @(x)isnumeric(x) && isvector(x));
-    addParameter(Parser, 'Length' , [], @(x)isnumeric(x) && isvector(x));
-    addParameter(Parser, 'Radius' , [], @(x)isnumeric(x) && isvector(x));
-    addParameter(Parser, 'Fv'    , [], @(x)isnumeric(x) && isvector(x));
-    addParameter(Parser, 'Fc'    , [], @(x)isnumeric(x) && isvector(x));
-    addParameter(Parser, 'Inertia', [], @(x)iscell(x) && all(cellfun(@(c)isequal(size(c), [3 3]), x)));
-    addParameter(Parser, 'COM'    , [], @(x)isnumeric(x) && size(x,2) == 3);
-    addParameter(Parser, 'DH'     , [], @(s)isstruct(s) && all(isfield(s, {'alpha', 'a', 'd', 'theta'})));
+    addParameter(Parser, 'Mass'   , [], @(x) isvector(x) && isNumOrSym(x));
+    addParameter(Parser, 'Length' , [], @(x) isvector(x) && isNumOrSym(x));
+    addParameter(Parser, 'Radius' , [], @(x) isvector(x) && isNumOrSym(x));
+    addParameter(Parser, 'Fv'     , [], @(x) isvector(x) && isNumOrSym(x));
+    addParameter(Parser, 'Fc'     , [], @(x) isvector(x) && isNumOrSym(x));
+    addParameter(Parser, 'Inertia', [], @(x) iscell(x) && ...
+        all(cellfun(@(c) isequal(size(c), [3 3]) && isNumOrSym(c), x)));
+    addParameter(Parser, 'COM'    , [], @(x) size(x, 2) == 3);
+    addParameter(Parser, 'DH'     , [], @(s) isstruct(s) && ...
+        all(isfield(s, {'alpha', 'a', 'd', 'theta'})));
     parse(Parser, varargin{:});
     R = Parser.Results;
 
