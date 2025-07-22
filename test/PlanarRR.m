@@ -184,7 +184,7 @@ fprintf('\n =====  ODE RHS (symbolic, handle, mfile)  ===== \n');
 ODE_sym = MD.ODEFunction('Return', 'symbolic');
 ODE_fun = MD.ODEFunction;
 MD.ODEFunction('Generate', 'mfile', 'File', 'PlanarRR_ode');
-ODE_mfile = @PlanarRR_ode_x_dot;
+ODE_mfile = @PlanarRR_ode;
 
 % Zero-Input Simulation for 10 s
 x0 = [q_num; 0; 0];
