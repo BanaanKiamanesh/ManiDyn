@@ -541,6 +541,13 @@ classdef ManipulatorDynamics < handle
                 OutName = char(base);
             end
 
+            % ---- Symbolic parameter check for codegen/handle ----------
+            if (OutType == "handle" || ismember(gType, ["mfile", "mex"])) && obj.isSymbolicPar()
+                error('ManipulatorDynamics:SymbolicCodegen', ...
+                    ['Cannot generate MATLAB function, MEX, or function handle when system parameters are symbolic. ', ...
+                    'Please provide numeric parameters.']);
+            end
+
             % ---- Return Type ------------------------------------------
             switch OutType
                 case "handle"
@@ -553,6 +560,8 @@ classdef ManipulatorDynamics < handle
             if gType ~= "none"
                 valid = matlab.lang.makeValidName(fBase);
                 switch gType
+                    case "none"
+                        % nothing to do
                     case "mfile"
                         matlabFunction(SymExpr, 'File', [valid '_' OutName], ...
                             'Vars', vars, 'Outputs', {OutName});
@@ -592,6 +601,41 @@ classdef ManipulatorDynamics < handle
                         end
                         delete([wrap '.m']);
                         fprintf('MEX file "%s_%s.%s" generated.\n', valid, OutName, mexext);
+                end
+            end
+        end
+
+        function tf = isSymbolicPar(obj)
+            %ISSYMBOLICPAR Returns true if any parameter in Par is symbolic
+            tf = false;
+            P = obj.Par;
+            % Check Mass
+            if any(arrayfun(@(x) isa(x,'sym'), P.Mass(:)))
+                tf = true; return;
+            end
+            % Check Inertia (cell array)
+            if any(cellfun(@(c) any(arrayfun(@(x) isa(x,'sym'), c(:))), P.Inertia))
+                tf = true; return;
+            end
+            % Check COM
+            if any(arrayfun(@(x) isa(x,'sym'), P.COM(:)))
+                tf = true; return;
+            end
+            % Check optional fields if present
+            optFields = {'Length','Radius','Fv','Fc'};
+            for k = 1:numel(optFields)
+                if isfield(P, optFields{k}) && ~isempty(P.(optFields{k}))
+                    if any(arrayfun(@(x) isa(x,'sym'), P.(optFields{k})(:)))
+                        tf = true; return;
+                    end
+                end
+            end
+            % Check DH struct fields
+            DH = P.DH;
+            dhFields = {'alpha','a','d','theta'};
+            for k = 1:numel(dhFields)
+                if any(arrayfun(@(x) isa(x,'sym'), DH.(dhFields{k})(:)))
+                    tf = true; return;
                 end
             end
         end

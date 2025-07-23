@@ -140,6 +140,13 @@ classdef ManipulatorKinematics
             rows  = Parser.Results.Rows; if isempty(rows), rows = 1:6; end
             outTyp =  lower(string(Parser.Results.Return));
 
+            % ---- Symbolic parameter check for codegen/handle ----------
+            if (outTyp == "handle" || ismember(gType, ["mfile", "mex"])) && obj.isSymbolicDH()
+                error('ManipulatorKinematics:SymbolicCodegen', ...
+                    ['Cannot generate MATLAB function, MEX, or function handle when DH parameters are symbolic. ', ...
+                    'Please provide numeric DH parameters.']);
+            end
+
             [DHMod, q] = obj.SymbolicDH;
             [R, P]     = ParseDH(DHMod);
             RotSym    = Rot2Eul(R{end});
@@ -242,6 +249,13 @@ classdef ManipulatorKinematics
             rows   = Parser.Results.Rows;
             outTyp = lower(string(Parser.Results.Return));
 
+            % ---- Symbolic parameter check for codegen/handle ----------
+            if (outTyp == "handle" || ismember(gType, ["mfile", "mex"])) && obj.isSymbolicDH()
+                error('ManipulatorKinematics:SymbolicCodegen', ...
+                    ['Cannot generate MATLAB function, MEX, or function handle when DH parameters are symbolic. ', ...
+                    'Please provide numeric DH parameters.']);
+            end
+
             % ---- Symbolic Jacobian ----------------------------------------------------------
             [DHMod, q] = obj.SymbolicDH;
 
@@ -320,6 +334,17 @@ classdef ManipulatorKinematics
                     DHMod.theta(i) = DHMod.theta(i) + q(i);
                 elseif obj.DH.type(i) == 'p'
                     DHMod.d(i)     = DHMod.d(i) + q(i);
+                end
+            end
+        end
+        function tf = isSymbolicDH(obj)
+            %ISSYMBOLICDH Returns true if any DH parameter is symbolic
+            tf = false;
+            DH = obj.DH;
+            dhFields = {'alpha','a','d','theta'};
+            for k = 1:numel(dhFields)
+                if any(arrayfun(@(x) isa(x,'sym'), DH.(dhFields{k})(:)))
+                    tf = true; return;
                 end
             end
         end

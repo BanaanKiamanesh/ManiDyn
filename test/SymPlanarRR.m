@@ -3,7 +3,7 @@ close all
 clc
 
 %% Parameter Declaration
-syms L1 L2 m1 m2 real   
+syms L1 L2 m1 m2 real
 
 I1 = diag([0, (1/12)*m1*L1^2, (1/12)*m1*L1^2]);
 I2 = diag([0, (1/12)*m2*L2^2, (1/12)*m2*L2^2]);
@@ -12,7 +12,7 @@ DH = DHStruct( ...
     'alpha',  [0 0], ...
     'a',      [L1 L2], ...
     'd',      [0 0], ...
-    'theta',  [0 0], ...     
+    'theta',  [0 0], ...
     'type',   'rr', ...
     'notation','original' );
 
@@ -47,3 +47,18 @@ disp(N);
 
 disp('Skew-symmetry check  (S + S.'') =');
 disp(simplify(N + N.'));
+
+% Test: Attempt to Generate Function Handle and MATLAB Function
+try
+    disp('Attempting to generate function handle for symbolic system...');
+    B_handle = Dyn.MassMatrix('Return', 'handle');
+catch ME
+    disp(['Expected error (function handle): ', ME.message]);
+end
+
+try
+    disp('Attempting to generate MATLAB function for symbolic system...');
+    B_file = Dyn.MassMatrix('Generate', 'mfile', 'File', 'test_B');
+catch ME
+    disp(['Expected error (mfile): ', ME.message]);
+end
