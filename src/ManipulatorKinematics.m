@@ -278,11 +278,12 @@ classdef ManipulatorKinematics
                             Jo(:, i) = sym([0;0;0]); Jp(:, i) = zPrev;
                         end
                     end
-                    Jsym = [Jp; Jo];
+                    Jsym = simplify([Jp; Jo]);
                 case "analytical"
                     [R, P] = ParseDH(DHMod);
                     xSym = [P{end}; Rot2Eul(R{end})];
                     Jsym = jacobian(xSym, q);
+                    Jsym = simplify(Jsym);
                 otherwise
                     error('ManipulatorKinematics:BadType', 'Unknown Jacobian');
             end

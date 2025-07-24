@@ -472,8 +472,9 @@ classdef ManipulatorDynamics < handle
             COM = obj.Par.COM;
             PC  = cell(1, n);
             for i = 1:n
-                ci   = sym(COM(i, :).');
-                PC{i}= P{i} + R{i}*ci;
+                ci    = sym(COM(i, :).');
+                PC{i} = P{i} + R{i}*ci;
+                PC{i} = simplify(PC{i});
             end
 
             % ---- Geometric Jacobian (orientation part) ----------------
@@ -482,22 +483,28 @@ classdef ManipulatorDynamics < handle
             Jo  = Jg(4:6, :);
 
             % ---- Mass Matrix B(q) -------------------------------------
+            disp('starting B')
             B_ = sym.zeros(n);
             for i = 1:n
                 m  = obj.Par.Mass(i);
                 Ic = sym(obj.Par.Inertia{i});
                 Ri = R{i};
-                Jp_ci = jacobian(PC{i}, q_);
+                Jp_ci = simplify(jacobian(PC{i}, q_));
                 Jo_i  = [Jo(:, 1:i), sym.zeros(3, n-i)];
                 B_ = B_ + m*(Jp_ci.'*Jp_ci) + Jo_i.'*Ri*Ic*Ri.'*Jo_i;
+
+                if i < 5, B_ = simplify(B_); end
+                disp(['B, i = ' num2str(i)])
             end
             obj.B = B_;
 
             % ---- Gravity Vector g(q) -----------------------------------
+            disp('starting g')
             U = -sum(arrayfun(@(k)obj.Par.Mass(k)*g0_.'*PC{k}, 1:n));
-            obj.g = jacobian(U, q_).';
+            obj.g = simplify(jacobian(U, q_).');
 
             % ---- Coriolis / Centrifugal Matrix C(q, qdot) --------------
+            disp('starting C')
             C_ = sym.zeros(n);
             for i = 1:n
                 for j = 1:n
@@ -509,6 +516,7 @@ classdef ManipulatorDynamics < handle
                     end
                     C_(i, j) = cij;
                 end
+                disp(['C, i = ' num2str(i)])
             end
             obj.C = C_;
         end

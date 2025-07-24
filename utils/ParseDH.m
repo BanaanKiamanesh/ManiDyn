@@ -58,7 +58,7 @@ function [R, P] = ParseDH(DHTable)
         TCurr = TCurr * T;
 
         % Store Rotation and Pos w.r.t. base
-        R{i} = TCurr(1:3, 1:3);
-        P{i} = TCurr(1:3, 4);
+        R{i} = simplify(TCurr(1:3, 1:3));
+        P{i} = simplify(TCurr(1:3, 4));
     end
 end
