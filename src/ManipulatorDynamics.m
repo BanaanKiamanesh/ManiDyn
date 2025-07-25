@@ -483,7 +483,6 @@ classdef ManipulatorDynamics < handle
             Jo  = Jg(4:6, :);
 
             % ---- Mass Matrix B(q) -------------------------------------
-            disp('starting B')
             B_ = sym.zeros(n);
             for i = 1:n
                 m  = obj.Par.Mass(i);
@@ -494,17 +493,14 @@ classdef ManipulatorDynamics < handle
                 B_ = B_ + m*(Jp_ci.'*Jp_ci) + Jo_i.'*Ri*Ic*Ri.'*Jo_i;
 
                 if i < 5, B_ = simplify(B_); end
-                disp(['B, i = ' num2str(i)])
             end
             obj.B = B_;
 
             % ---- Gravity Vector g(q) -----------------------------------
-            disp('starting g')
             U = -sum(arrayfun(@(k)obj.Par.Mass(k)*g0_.'*PC{k}, 1:n));
             obj.g = simplify(jacobian(U, q_).');
 
             % ---- Coriolis / Centrifugal Matrix C(q, qdot) --------------
-            disp('starting C')
             C_ = sym.zeros(n);
             for i = 1:n
                 for j = 1:n
@@ -516,7 +512,6 @@ classdef ManipulatorDynamics < handle
                     end
                     C_(i, j) = cij;
                 end
-                disp(['C, i = ' num2str(i)])
             end
             obj.C = C_;
         end
