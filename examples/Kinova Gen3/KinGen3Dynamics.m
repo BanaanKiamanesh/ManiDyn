@@ -3,59 +3,65 @@ close all
 clc
 
 %% Kinova Gen3 Lite – Approximate Dynamical Properties
-M = [1.377     % Link 1  (shoulder)
-     1.1636    % Link 2  (upper-arm)
-     1.1636    % Link 3  (fore-arm)
-     0.930     % Link 4  (lower-wrist)
-     0.678     % Link 5  (upper-wrist)
-     0.678 ];  % Link 6  (flange / wrist-2)
+M = [2.009      % Link 1  (shoulder)
+     1.106      % Link 2  (upper-arm)
+     1.106      % Link 3  (fore-arm)
+     0.895      % Link 4  (lower-wrist)
+     0.654      % Link 5  (upper-wrist)
+     0.654      % Link 6  (flange / wrist-2)
+     0.31408 ]; % Link 7  (interface)
 
 % Inertia Tensors 
 I = { ...
-    [ 0.004570,  0.000001,  0.000002;      % Link 1
-      0.000001,  0.004831,  0.000448;
-      0.000002,  0.000448,  0.001409 ];
+    [ 0.0045081, -0.00000086, -0.00000190;      % Link 1
+     -0.00000086,  0.0047695, -0.00045534;
+     -0.00000190, -0.00045534,  0.0013903 ];
 
-    [ 0.011088,  0.000005,  0.000000;      % Link 2
-      0.000005,  0.001072, -0.000691;
-      0.000000, -0.000691,  0.011255 ];
+    [ 0.0089168, -0.00000290, -0.00000017;      % Link 2
+     -0.00000290,  0.00073106,  0.00051768;
+     -0.00000017,  0.00051768,  0.0090416 ];
 
-    [ 0.010932,  0.000000, -0.000007;      % Link 3
-      0.000000,  0.011127,  0.000606;
-     -0.000007,  0.000606,  0.001043 ];
+    [ 0.0088707,  0.00000023, -0.00000332;      % Link 3
+      0.00000023,  0.0090034, -0.00050415;
+     -0.00000332, -0.00050415,  0.00071859 ];
 
-    [ 0.008147, -0.000001,  0.000000;      % Link 4
-     -0.000001,  0.000631, -0.000500;
-      0.000000, -0.000500,  0.008316 ];
+    [ 0.0067339,  0.00000070, -0.00000002;      % Link 4
+      0.00000070,  0.00045088,  0.00038999;
+     -0.00000002,  0.00038999,  0.0068613 ];
 
-    [ 0.001596,  0.000000,  0.000000;      % Link 5
-      0.000000,  0.001607,  0.000256;
-      0.000000,  0.000256,  0.000399 ];
+    [ 0.0013311,  0.00000000,  0.00000000;      % Link 5
+      0.00000000,  0.0013282, -0.00022936;
+      0.00000000, -0.00022936,  0.00030696 ];
 
-    [ 0.001641,  0.000000,  0.000000;      % Link 6
-      0.000000,  0.000410, -0.000278;
-      0.000000, -0.000278,  0.001641 ] ...
+    [ 0.0013422,  0.00000000,  0.00000000;      % Link 6
+      0.00000000,  0.00031025,  0.00023506;
+      0.00000000,  0.00023506,  0.0013360 ];
+
+    [ 0.00022640, -0.00000049, -0.00000026;     % Link 7
+     -0.00000049,  0.00015697, -0.00004561;
+     -0.00000026, -0.00004561,  0.00025981 ] ...
 };
 
-COM = [-0.000023,  -0.010364,  -0.073360
-       -0.000044,  -0.099580,  -0.013278
-       -0.000044,  -0.006641,  -0.117892
-       -0.000018,  -0.075478,  -0.015006
-        0.000001,  -0.009432,  -0.063883
-        0.000001,  -0.045483,  -0.009650 ];
-
+COM = [-2.289e-5,  -0.010511,  -0.075159
+       -2.782e-5,  -0.097298,  -0.012693
+        2.981e-5,  -0.0062391, -0.115520
+       -1.102e-5,  -0.075357,  -0.014085
+       -3.3e-7,    -0.009617,  -0.062968
+       -3.4e-7,    -0.044043,  -0.0097804
+       -2.788e-5,  -0.0052162, -0.022692];
 
 % DH Table
-alpha = [ -pi/2, pi/2,   pi/2, pi/2,  -pi/2,   pi/2];
-a     = [     0,    0,      0,    0,      0,      0];
-d     = [-(0.1564+0.1284), ...
-         -(0.0054+0.0064), ...
-         -(0.2104+0.2104), ...
-         -(0.0064+0.0064), ...
-         -(0.2084+0.1059), ...
-         0];
-theta = [0, pi, pi, pi, pi, pi];
-type  = 'rrrrrr';
+alpha = [  pi,  pi/2,   pi/2,  pi/2,  pi/2,  pi/2,   pi];
+a     = [   0,     0,      0,     0,     0,     0,    0];
+d     = [ -0.2848, ...
+          -0.0118, ...
+          -0.4208, ...
+          -0.0128, ...
+          -0.3143, ...
+           0, ...
+          -0.1674];
+theta = [0, pi, pi, pi, pi, pi, pi];
+type  = 'rrrrrrr';
 
 % Data-Structure Creation
 DH     = DHStruct('alpha', alpha, 'a', a, 'd', d, 'theta', theta, 'type', type);
@@ -65,21 +71,20 @@ DynPar = DynStruct('DH', DH, 'Mass', M, 'Inertia', I, 'COM', COM);
 kin = ManipulatorKinematics(DH);
 dyn = ManipulatorDynamics(DynPar);
 
-kin.CalculateFK('Rows', 1:6, 'Generate', 'mfile', 'File', 'gen3_fk');
-kin.Jacobian('Type', 'geometric' , 'Generate', 'mfile', 'File', 'gen3_jac_geo');
-kin.Jacobian('Type', 'analytical', 'Generate', 'mfile', 'File', 'gen3_jac_ana');
+kin.CalculateFK('Rows', 1:7, 'Generate', 'mfile', 'File', 'gen3_fk');
+kin.Jacobian   ('Type', 'geometric' , 'Generate', 'mfile', 'File', 'gen3_jac_geo');
+kin.Jacobian   ('Type', 'analytical', 'Generate', 'mfile', 'File', 'gen3_jac_ana');
 
 dyn.MassMatrix ('Generate', 'mfile', 'File', 'gen3_dyn');
 dyn.Coriolis   ('Generate', 'mfile', 'File', 'gen3_dyn');
 dyn.Gravity    ('Generate', 'mfile', 'File', 'gen3_dyn');
 dyn.ODEFunction('Generate', 'mfile', 'File', 'gen3_dyn');
 
-
 fprintf('\nCode Generation Complete!\n');
 
 %% Quick Numeric Smoke-Test
-q    = zeros(6, 1);
-qdot = randn(6, 1);
+q    = zeros(7, 1);
+qdot = randn(7, 1);
 
 Pose = gen3_fk(q);
 Jg   = gen3_jac_geo(q);
