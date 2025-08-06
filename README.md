@@ -20,18 +20,20 @@ exported as `.m` files, C source, or compiled **MEX** binaries for real-time use
 
 ## Table of Contents
 
-* [Table of Contents](#table-of-contents)
-* [Installation](#installation)
-* [Defining a Manipulator](#defining-a-manipulator)
-* [Kinematics Workflow](#kinematics-workflow)
-* [Dynamics Workflow](#dynamics-workflow)
-* [Supported Output Formats](#supported-output-formats)
-* [Inverse Kinematics Utilities](#inverse-kinematics-utilities)
-* [Inverse Kinematics Algorithms](#inverse-kinematics-algorithms)
-* [Examples](#examples)
-* [Testing](#testing)
-* [Requirements](#requirements)
-* [License](#license)
+- [ManiDyn](#manidyn)
+  - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
+  - [Defining a Manipulator](#defining-a-manipulator)
+  - [Kinematics Workflow](#kinematics-workflow)
+  - [Dynamics Workflow](#dynamics-workflow)
+  - [Supported Output Formats](#supported-output-formats)
+  - [Inverse Kinematics Utilities](#inverse-kinematics-utilities)
+  - [Inverse Kinematics Algorithms](#inverse-kinematics-algorithms)
+  - [Examples](#examples)
+  - [Testing](#testing)
+  - [Requirements](#requirements)
+  - [Full Example: Advanced Control on a Complex Robotic Arm](#full-example-advanced-control-on-a-complex-robotic-arm)
+  - [License](#license)
 
 ---
 
@@ -240,6 +242,16 @@ Basic regression tests are located in `test/`:
 * MATLAB R2021a or newer (earlier versions may work)
 * Symbolic Math Toolbox for full functionality
 * MATLAB Coder (optional) for MEX / C code generation
+
+---
+
+## Full Example: Advanced Control on a Complex Robotic Arm
+
+For a complete, real-world example of ManiDyn in action—including advanced control algorithms, simulation, and deployment on a highly complex 7-DOF Kinova Gen3 robotic arm—see:
+
+[Kinova-Gen3-Control (GitHub)](https://github.com/BanaanKiamanesh/Kinova-Gen3-Control/)
+
+This repository demonstrates full manipulator modeling, dynamics, and a variety of modern control strategies (PD, PID, feedback linearization, inverse dynamics, sliding mode, and more) all powered by ManiDyn.
 
 ---
 
