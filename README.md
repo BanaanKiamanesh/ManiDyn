@@ -40,9 +40,9 @@ exported as `.m` files, C source, or compiled **MEX** binaries for real-time use
 ## Installation
 
 ```matlab
-% clone repository then from MATLAB:
+% clone repository, then from MATLAB:
 >> cd <path_to>/ManiDyn
->> install   % adds folders to MATLAB path
+>> install('save')       % adds folders to MATLAB path
 ```
 
 Alternatively add the `src` and `utils` folders to the `MATLABPATH` manually.
