@@ -534,7 +534,7 @@ classdef ManipulatorDynamics < handle
 
             % ---- Gravity Vector g(q) -----------------------------------
             U     = -sum(arrayfun(@(k)obj.Par.Mass(k)*g0_.'*PC{k}, 1:n));
-            g_    = simplify(jacobian(U, q_).');
+            g_    = jacobian(U, q_).';
             obj.g = simplify(expand(g_));
 
             % ---- Coriolis / Centrifugal Matrix C(q, qdot) --------------
@@ -580,18 +580,22 @@ classdef ManipulatorDynamics < handle
                     end
                 end
                 % Reverse filling Gravity acceleration elements
-                rIdx  = n*(n+3) / 2 - i + 1; % reverse indices
-                gRvrs = g_(n-i+1);
-                if gRvrs ~= sym(0)
-                    [c, b] = coeffs(gRvrs);
-                    nb = numel(b);
-                    factors{rIdx} = c';
-                    basis{rIdx}   = b';
-                    nBasis(rIdx)  = nb;
-                else % zero-elements handling
-                    factors{rIdx} = 0;
-                    basis{rIdx}   = 0;
-                    nBasis(rIdx)  = 1;
+                if all(g_ == sym(0))
+                    continue; % when the total potential energy equals zeros
+                else
+                    rIdx  = n*(n+3) / 2 - i + 1; % reverse indices
+                    gRvrs = g_(n-i+1);
+                    if gRvrs ~= sym(0)
+                        [c, b] = coeffs(gRvrs);
+                        nb = numel(b);
+                        factors{rIdx} = c';
+                        basis{rIdx}   = b';
+                        nBasis(rIdx)  = nb;
+                    else % zero-elements handling
+                        factors{rIdx} = 0;
+                        basis{rIdx}   = 0;
+                        nBasis(rIdx)  = 1;
+                    end
                 end
             end
 
