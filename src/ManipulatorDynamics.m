@@ -68,6 +68,7 @@ classdef ManipulatorDynamics < handle
         B  sym = sym.empty
         C  sym = sym.empty
         g  sym = sym.empty
+        Y  sym = sym.empty
 
         q  sym
         qd sym
@@ -184,7 +185,7 @@ classdef ManipulatorDynamics < handle
             %   Output Arguments:
             %       B - The mass matrix, either as a sym or function_handle.
             %
-            %   See also: Coriolis, Gravity.
+            %   See also: Coriolis, Gravity, Regressor.
             obj.BuildDynamics;
             B = obj.ReturnFormat(obj.B, 'B', varargin{:});
         end
@@ -219,7 +220,7 @@ classdef ManipulatorDynamics < handle
             %   Output Arguments:
             %       C - The Coriolis matrix, either as a sym or function_handle.
             %
-            %   See also: MassMatrix, Gravity.
+            %   See also: MassMatrix, Gravity, Regressor.
             obj.BuildDynamics;
             C = obj.ReturnFormat(obj.C, 'C', varargin{:});
         end
@@ -254,9 +255,44 @@ classdef ManipulatorDynamics < handle
             %   Output Arguments:
             %       g - The gravity vector, either as a sym or function_handle.
             %
-            %   See also: MassMatrix, Coriolis.
+            %   See also: MassMatrix, Coriolis, Regressor.
             obj.BuildDynamics;
             g = obj.ReturnFormat(obj.g, 'g', varargin{:});
+        end
+        function Y = Regressor(obj, varargin)
+            %REGRESSOR Returns a minimal linear in parameter format of the equations of motion.
+            %   Y = Regressor(OBJ) returns the n-by-m symbolic regressor matrix Y(qdd, qd, q).
+            %
+            %   Y = REGRESSOR(OBJ, 'Return', 'handle') returns a function handle
+            %   Y_fun = @(qdd, qd, q) ... that evaluates the regressor matrix for a given
+            %   n-by-1 joint state vector q, joint velocity vector qd, and joint acceleration vector qdd.
+            %
+            %   REGRESSOR(OBJ, 'Generate', 'mfile'/'ccode'/'mex', 'File', FILENAME)
+            %   generates files for the symbolic expression.
+            %
+            %   Input Arguments:
+            %       OBJ - A ManipulatorDynamics object.
+            %
+            %   Name-Value Pair Arguments:
+            %       'Return' - Specifies the return type.
+            %           "symbolic" (default): Returns a symbolic vector.
+            %           "handle"  : Returns a function handle.
+            %
+            %       'Generate' - Generates a file from the symbolic expression.
+            %           "none"    (default): No file is generated.
+            %           "mfile"   : Generates a MATLAB function (.m).
+            %           "ccode"   : Generates a C code file (.c).
+            %           "mex"     : Generates a compiled MEX function.
+            %
+            %       'File' - Specifies the base filename for the generated file.
+            %                Default: "dynamics".
+            %
+            %   Output Arguments:
+            %       Y - The regressor matrix, either as a sym or function_handle.
+            %
+            %   See also: MassMatrix, Coriolis, Gravity.
+            obj.BuildDynamics;
+            Y = obj.ReturnFormat(obj.Y, 'Y', varargin{:});
         end
 
         % ───────────────────── ODE Function Builder ──────────────────────
@@ -492,13 +528,14 @@ classdef ManipulatorDynamics < handle
                 Jo_i  = [Jo(:, 1:i), sym.zeros(3, n-i)];
                 B_ = B_ + m*(Jp_ci.'*Jp_ci) + Jo_i.'*Ri*Ic*Ri.'*Jo_i;
 
-                if i < 5, B_ = simplify(B_); end
+                if i < 5, B_ = simplify(expand(B_)); end
             end
             obj.B = B_;
 
             % ---- Gravity Vector g(q) -----------------------------------
-            U = -sum(arrayfun(@(k)obj.Par.Mass(k)*g0_.'*PC{k}, 1:n));
-            obj.g = simplify(jacobian(U, q_).');
+            U     = -sum(arrayfun(@(k)obj.Par.Mass(k)*g0_.'*PC{k}, 1:n));
+            g_    = simplify(jacobian(U, q_).');
+            obj.g = simplify(expand(g_));
 
             % ---- Coriolis / Centrifugal Matrix C(q, qdot) --------------
             C_ = sym.zeros(n);
@@ -514,6 +551,129 @@ classdef ManipulatorDynamics < handle
                 end
             end
             obj.C = C_;
+
+            % ---- Regressor Matrix Y(qdd, qd, q) ------------------------
+            tol = 1e-8;                     % factors similarity tolerance
+            B_  = vpa(B_, abs(log10(tol)));
+            g_  = vpa(g_, abs(log10(tol)));
+
+            factors = cell(n*(n+3) / 2, 1);
+            basis   = factors;
+            nBasis  = zeros(n*(n+3) / 2, 1);
+
+            % Extract basis and factors
+            for i = 1:n
+                for j = i:n
+                    % Forward filling Mass Matrix elements
+                    fIdx = (i-1)*n - (i-1)*(i-2)/2 + (j-i+1); % forward indices
+                    BFrwrd = B_(i, j);
+                    if BFrwrd ~= sym(0)
+                        [c, b] = coeffs(BFrwrd);
+                        nb = numel(b);
+                        factors{fIdx} = c';
+                        basis{fIdx}   = b';
+                        nBasis(fIdx)  = nb;
+                    else % zero-elements handling
+                        factors{fIdx} = 0;
+                        basis{fIdx}   = 0;
+                        nBasis(fIdx)  = 1;
+                    end
+                end
+                % Reverse filling Gravity acceleration elements
+                rIdx  = n*(n+3) / 2 - i + 1; % reverse indices
+                gRvrs = g_(n-i+1);
+                if gRvrs ~= sym(0)
+                    [c, b] = coeffs(gRvrs);
+                    nb = numel(b);
+                    factors{rIdx} = c';
+                    basis{rIdx}   = b';
+                    nBasis(rIdx)  = nb;
+                else % zero-elements handling
+                    factors{rIdx} = 0;
+                    basis{rIdx}   = 0;
+                    nBasis(rIdx)  = 1;
+                end
+            end
+
+            % Convert to the column vector
+            factors = cell2mat(factors);
+            basis   = cell2mat(basis);
+
+            % Allowed coefficients
+            posMultipliers     = [0.25 0.5 1 2 4];
+            negMultipliers     = - posMultipliers;
+            allowedMultipliers = [negMultipliers, posMultipliers];
+
+            % Get a minimal factors
+            nParams = sum(nBasis);                         % n unknown parameters
+            varphi  = sym('varphi', [nParams, 1], 'real'); % unknown parameters vector
+            minimalFactors = zeros(nParams, 1, 'sym');     % minimal factors
+
+            % Representative values
+            repValue = zeros(nParams, 1);
+            repIndex = zeros(nParams, 1);
+            nRep     = 0;
+            for i = 1:nParams
+                found = false;
+                % Search previous representatives
+                for j = 1:nRep
+                    for c = allowedMultipliers
+                        if abs(factors(i) - c*repValue(j)) < tol
+                            minimalFactors(i) = c*varphi(repIndex(j));
+                            found = true;
+                            break
+                        end
+                    end
+                    if found
+                        break
+                    end
+                end
+                % No match -> create a new symbolic variable
+                if ~found
+                    nRep = nRep + 1;
+                    repValue(nRep) = factors(i);
+                    repIndex(nRep) = nRep;
+                    minimalFactors(i) = varphi(nRep);
+                end
+            end
+
+            % Remove unused variables
+            varphi   = varphi(1:nRep);
+
+            % Construct dynamical terms as linear in params (factors)
+            terms  = minimalFactors .* basis;
+            B_lp_ = zeros(n, n, 'sym');
+            g_lp_ = zeros(n, 1, 'sym');
+            for i  = 1:n
+                for j = i:n
+                    B_lp_(i, j) = sum(terms(1 : nBasis(1)));
+                    B_lp_(j, i) = B_lp_(i, j);
+                    terms(1 : nBasis(1)) = [];
+                    nBasis(1) = [];
+                end
+                g_lp_(n-i+1) = sum(terms(end-nBasis(end)+1 : end));
+                terms(end-nBasis(end)+1 : end) = [];
+                nBasis(end) = [];
+            end
+
+            % Compute coriolis and centrifugal terms
+            C_lp_ = sym.zeros(n);
+            for i = 1:n
+                for j = 1:n
+                    cij = sym(0);
+                    for k = 1:n
+                        cij = cij + 0.5*(diff(B_lp_(i, j), q_(k)) ...
+                            + diff(B_lp_(i, k), q_(j)) ...
+                            - diff(B_lp_(j, k), q_(i))) * qd_(k);
+                    end
+                    C_lp_(i, j) = cij;
+                end
+            end
+
+            % regressor
+            qdd_  = sym('qdd', [n,  1], 'real');
+            tau_  = B_lp_ * qdd_ + C_lp_ * qd_ + g_lp_;
+            obj.Y = jacobian(tau_, varphi);
         end
 
         % ───────── Format Output + Optional File / MEX Generation ──────
@@ -586,7 +746,7 @@ classdef ManipulatorDynamics < handle
                     case "mex"
                         % Generic dimension inference is non-trivial → support only
                         % original B, C, g paths for now.
-                        if ~ismember(OutName, {'B','C','g'})
+                        if ~ismember(OutName, {'B','C','g','Y'})
                             error('ReturnFormat:MexUnsupported', ...
                                 'MEX generation not supported for output "%s".', OutName);
                         end
