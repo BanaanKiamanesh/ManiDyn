@@ -84,7 +84,7 @@ R = [0.05, 0.05, 0.05];           % Link radii [m]
 I1 = 1/12 * M(1) * diag([0 0 L1^2]);
 I2 = 1/12 * M(2) * diag([0 0 L2^2]);
 I3 = 1/12 * M(3) * diag([0 0 L3^2]);
-I  = {sym(I1), sym(I2), sym(I3)};
+I  = {I1, I2, I3};
 
 COM = [L1/2, 0.0, 0.0;            % Centers of mass
     L2/2, 0.0, 0.0;
@@ -104,17 +104,19 @@ DynPar = DynStruct('Mass', M, 'Length', L, 'Radius', R, ...
 fprintf('\n ================   Dynamics Validation(g = [0, 0, -9.81])   ========================== \n');
 MD = ManipulatorDynamics(DynPar);
 
-B = MD.MassMatrix;  disp('Symbolic Mass matrix B(q):');         disp(B);
-C = MD.Coriolis;    disp('Symbolic Coriolis matrix C(q, qd):'); disp(C);
-g = MD.Gravity;     disp('Symbolic gravity vector g(q):');      disp(g);
+B = MD.MassMatrix;  disp('Symbolic Mass matrix B(q):');               disp(B);
+C = MD.Coriolis;    disp('Symbolic Coriolis matrix C(q, qd):');       disp(C);
+g = MD.Gravity;     disp('Symbolic gravity vector g(q):');            disp(g);
+Y = MD.Regressor;   disp('Symbolic regressor matrix Y(qdd, qd, q):'); disp(Y);
 
 % Test for Custom Gravity Direction
 fprintf('\n ================   Dynamics Validation(g = [0, -9.81, 0])   ========================== \n');
 MD = ManipulatorDynamics(DynPar, 'Gravity', [0 -9.81 0]);
 
-B = MD.MassMatrix;  disp('Symbolic Mass matrix B(q):');         disp(B);
-C = MD.Coriolis;    disp('Symbolic Coriolis matrix C(q, qd):'); disp(C);
-g = MD.Gravity;     disp('Symbolic gravity vector g(q):');      disp(g);
+B = MD.MassMatrix;  disp('Symbolic Mass matrix B(q):');               disp(B);
+C = MD.Coriolis;    disp('Symbolic Coriolis matrix C(q, qd):');       disp(C);
+g = MD.Gravity;     disp('Symbolic gravity vector g(q):');            disp(g);
+Y = MD.Regressor;   disp('Symbolic regressor matrix Y(qdd, qd, q):'); disp(Y);
 
 %% Comprehensive Kinematics Tests
 fprintf('\n =====  Kinematics Return Types & Code Generation  ===== \n');
