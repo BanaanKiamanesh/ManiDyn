@@ -1,10 +1,13 @@
 %MANIPULATORDYNAMICS Derives manipulator dynamics terms from physical parameters.
 %   This class computes the terms of the standard manipulator dynamics
 %
-%   equation: B(q)q_dd + C(q, qd)qd + Fv qd + Fc sgn(qd) + g(q) = tau, where:
+%   equation 1: B(q)q_dd + C(q, qd)qd + Fv qd + Fc sgn(qd) + g(q) = tau,
+%   equation 2:  tau = Y theta, where:
 %     - B(q) is the n-by-n mass matrix.
 %     - C(q, qd) is the n-by-n Coriolis and centrifugal effects matrix.
 %     - g(q) is the n-by-1 gravity vector.
+%     - Y(qdd, qd, q) is the n-by-m regressor matrix.
+%     - theta is the m-by-1 unknown dynamical parameters.
 %     - q, qd, q_dd are the joint position, velocity, and acceleration vectors.
 %     - tau is the vector of joint torques/forces.
 %
@@ -20,6 +23,7 @@
 %       B   - Symbolic mass matrix.
 %       C   - Symbolic Coriolis/centrifugal matrix.
 %       g   - Symbolic gravity vector.
+%       Y   - Symbolic regressor matrix.
 %       q   - Symbolic joint variable vector.
 %       qd  - Symbolic joint velocity vector.
 %
@@ -28,6 +32,7 @@
 %       MassMatrix          - Returns the mass matrix B(q).
 %       Coriolis            - Returns the Coriolis matrix C(q, qd).
 %       Gravity             - Returns the gravity vector g(q).
+%       Regressor           - Returns the regressor matrix Y(qdd, qd, q).
 %       ODEFunction         - Builds a full-state ODE rhs for simulation.
 %
 %   Example:
@@ -179,7 +184,7 @@ classdef ManipulatorDynamics < handle
             %           "ccode"   : Generates a C code file (.c).
             %           "mex"     : Generates a compiled MEX function.
             %
-            %       'File' - Specifies the base filename for the generated file.
+            %       'File' - Specifies the base filregreename for the generated file.
             %                Default: "dynamics".
             %
             %   Output Arguments:
@@ -581,7 +586,7 @@ classdef ManipulatorDynamics < handle
                 end
                 % Reverse filling Gravity acceleration elements
                 if all(g_ == sym(0))
-                    continue; % when the total potential energy equals zeros
+                    continue; % when the total potential energy equals zero
                 else
                     rIdx  = n*(n+3) / 2 - i + 1; % reverse indices
                     gRvrs = g_(n-i+1);
