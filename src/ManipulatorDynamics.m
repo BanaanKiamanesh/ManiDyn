@@ -75,8 +75,9 @@ classdef ManipulatorDynamics < handle
         g  sym = sym.empty
         Y  sym = sym.empty
 
-        q  sym
-        qd sym
+        q   sym
+        qd  sym
+        qdd sym
     end
 
     methods
@@ -485,13 +486,15 @@ classdef ManipulatorDynamics < handle
                 return
             end        % already built
 
-            n   = numel(obj.Par.Mass);
-            q_  = sym('q' , [n 1], 'real');
-            qd_ = sym('qd', [n 1], 'real');
-            g0_ = sym(obj.g0);
+            n    = numel(obj.Par.Mass);
+            q_   = sym('q' ,  [n 1], 'real');
+            qd_  = sym('qd',  [n 1], 'real');
+            qdd_ = sym('qdd', [n 1], 'real');
+            g0_  = sym(obj.g0);
 
-            obj.q  = q_;
-            obj.qd = qd_;
+            obj.q   = q_;
+            obj.qd  = qd_;
+            obj.qdd = qdd_;
 
             % ---- DH with Joint Variables Added ------------------------
             DHMod = obj.Par.DH;
@@ -680,7 +683,6 @@ classdef ManipulatorDynamics < handle
             end
 
             % regressor
-            qdd_  = sym('qdd', [n,  1], 'real');
             tau_  = B_lp_ * qdd_ + C_lp_ * qd_ + g_lp_;
             obj.Y = jacobian(tau_, varphi);
         end
@@ -705,6 +707,9 @@ classdef ManipulatorDynamics < handle
                 vars = {obj.q};
                 if base == "C"
                     vars = {obj.q, obj.qd};
+                end
+                if base == "Y"
+                    vars = {obj.qdd, obj.qd, obj.q};
                 end
             end
 
@@ -763,7 +768,12 @@ classdef ManipulatorDynamics < handle
                         wrap = [valid '_' OutName '_wrap'];
                         matlabFunction(SymExpr, 'File', wrap, 'Vars', vars, 'Outputs', {OutName});
                         n = numel(obj.q);
-                        if strcmp(OutName, 'C')
+                        if strcmp(OutName, 'Y')
+                            codegen(wrap, '-o', [valid '_' OutName], ...
+                                '-args', {coder.typeof(0, [n 1], false), ...
+                                coder.typeof(0, [n 1], false), ...
+                                coder.typeof(0, [n 1], false)});
+                        elseif strcmp(OutName, 'C')
                             codegen(wrap, '-o', [valid '_' OutName], ...
                                 '-args', {coder.typeof(0, [n 1], false), ...
                                 coder.typeof(0, [n 1], false)});
