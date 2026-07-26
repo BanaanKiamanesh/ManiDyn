@@ -6,7 +6,7 @@ fully-symbolic expressions of
 
 * Forward kinematics
 * Geometric / analytical Jacobians
-* Dynamics – mass matrix **B(q)**, Coriolis/centrifugal matrix **C(q, q̇)** and gravity vector **g(q)**
+* Dynamics – mass matrix $$B(q)$$, Coriolis/centrifugal matrix $$C(q, \dot{q})$$, gravity vector $$g(q)$$, and regressor matrix $$Y(\ddot{q}, \dot{q}, q)$$
 
 Every quantity—masses, link lengths, DH parameters, inertias, friction coefficients—can be
 **numeric *or* symbolic**.  A completely symbolic workflow is therefore possible end-to-end.
@@ -121,11 +121,13 @@ dyn_fric = ManipulatorDynamics(DynAll);
 B  = dyn.MassMatrix();                 % symbolic
 C  = dyn.Coriolis();
 g  = dyn.Gravity();
+Y  = dyn.Regressor();
 
 % Numerical handles
 Bf = dyn.MassMatrix('Return','handle');
 Cf = dyn.Coriolis  ('Return','handle');
 gf = dyn.Gravity   ('Return','handle');
+Yf = dyn.Regressor ('Return','handle');
 
 B_num = Bf([pi/3;pi/6]);
 
@@ -161,6 +163,7 @@ The core symbolic methods can produce results in several forms via the `Return` 
 | `MassMatrix`  |          ✓         |                   ✓                   |                  ✓                 |                ✓                |                 ✓                 |
 | `Coriolis`    |          ✓         |                   ✓                   |                  ✓                 |                ✓                |                 ✓                 |
 | `Gravity`     |          ✓         |                   ✓                   |                  ✓                 |                ✓                |                 ✓                 |
+| `Regressor`   |          ✓         |                   ✓                   |                  ✓                 |                ✓                |                 ✓                 |
 | `ODEFunction` |          ✓         |                   ✓                   |                  ✓                 |                ✗                |                 ✓                 |
 
 Every generated file/function encodes the exact same symbolic expression, so you can mix-and-match formats depending on performance and deployment needs.
