@@ -78,22 +78,26 @@ kin.Jacobian   ('Type', 'analytical', 'Generate', 'mfile', 'File', 'gen3_jac_ana
 dyn.MassMatrix ('Generate', 'mfile', 'File', 'gen3_dyn');
 dyn.Coriolis   ('Generate', 'mfile', 'File', 'gen3_dyn');
 dyn.Gravity    ('Generate', 'mfile', 'File', 'gen3_dyn');
+dyn.Regressor  ('Generate', 'mfile', 'File', 'gen3_dyn');
 dyn.ODEFunction('Generate', 'mfile', 'File', 'gen3_dyn');
 
 fprintf('\nCode Generation Complete!\n');
 
 %% Quick Numeric Smoke-Test
-q    = zeros(7, 1);
-qdot = randn(7, 1);
+q     = zeros(7, 1);
+qdot  = randn(7, 1);
+qddot = randn(7, 1);
 
 Pose = gen3_fk(q);
 Jg   = gen3_jac_geo(q);
 B    = gen3_dyn_B(q);
 C    = gen3_dyn_C(q, qdot);
 g    = gen3_dyn_g(q);
+Y    = gen3_dyn_Y(qddot, qdot, q);
 
 disp('FK at zero config:'); disp(Pose)
 disp('Jacobian:');          disp(Jg)
 disp('Mass-matrix:');       disp(B)
 disp('Coriolis:');          disp(C)
 disp('Gravity vector:');    disp(g)
+disp('Regressor matrix:');  disp(Y)

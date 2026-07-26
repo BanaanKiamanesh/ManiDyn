@@ -48,26 +48,30 @@ kin.Jacobian('Type', 'analytical', 'Generate', 'mfile', 'File', 'scara_jac_ana')
 dyn.MassMatrix ('Generate', 'mex', 'File', 'scara_dyn');
 dyn.Coriolis   ('Generate', 'mex', 'File', 'scara_dyn');
 dyn.Gravity    ('Generate', 'mex', 'File', 'scara_dyn');
+dyn.Regressor  ('Generate', 'mex', 'File', 'scara_dyn');
 dyn.ODEFunction('Generate', 'mex', 'File', 'scara_dyn');
 
 
 fprintf('SCARA code generation complete.\n');
 
 %% Quick Numeric Smoke-Test
-q    = zeros(4, 1);
-qdot = zeros(4, 1);
+q     = zeros(4, 1);
+qdot  = zeros(4, 1);
+qddot = zeros(4, 1);
 
 Pose = scara_fk(q);
 Jg   = scara_jac_geo(q);
 B    = scara_dyn_B(q);
 C    = scara_dyn_C(q, qdot);
 g    = scara_dyn_g(q);
+Y    = scara_dyn_Y(qddot, qdot, q);
 
 disp('FK pose:');            disp(Pose)
 disp('Geometric Jacobian:'); disp(Jg)
 disp('Mass matrix:');        disp(B)
 disp('Coriolis matrix:');    disp(C)
 disp('Gravity vector:');     disp(g)
+disp('Regressor matrix:');   disp(Y)
 
 %% Test Simulation
 % Build Full-State ODE Function

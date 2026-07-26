@@ -143,46 +143,55 @@ fprintf('\n =====  Dynamics Return Types & Code Generation  ===== \n');
 MD = ManipulatorDynamics(DynPar, 'Gravity', [0, -9.81, 0]);
 
 % Symbolic terms
-BSym = MD.MassMatrix;  CSym = MD.Coriolis;  gSym = MD.Gravity;
+BSym = MD.MassMatrix;  CSym = MD.Coriolis;
+gSym = MD.Gravity;     YSym = MD.Gravity;
 
 % Handles
 BFun = MD.MassMatrix('Return', 'handle');
 CFun = MD.Coriolis  ('Return', 'handle');
 gFun = MD.Gravity   ('Return', 'handle');
+YFun = MD.Regressor ('Return', 'handle');
 
-fprintf('B handle at q:');       disp(BFun(QNum));
-fprintf('C handle at (q, qd):'); disp(CFun(QNum, zeros(3, 1)));
-fprintf('g handle at q:');       disp(gFun(QNum));
+fprintf('B handle at q:');            disp(BFun(QNum));
+fprintf('C handle at (q, qd):');      disp(CFun(QNum, zeros(3, 1)));
+fprintf('g handle at q:');            disp(gFun(QNum));
+fprintf('Y handle at (qdd, qd, q):'); disp(YFun(zeros(3, 1), zeros(3, 1), QNum));
 
 % Generate MATLAB files
 MD.MassMatrix('Generate', 'mfile', 'File', 'PlanarRPR_dyn');
 MD.Coriolis  ('Generate', 'mfile', 'File', 'PlanarRPR_dyn');
 MD.Gravity   ('Generate', 'mfile', 'File', 'PlanarRPR_dyn');
+MD.Regressor ('Generate', 'mfile', 'File', 'PlanarRPR_dyn');
 
 % Call generated MATLAB functions
 BMfile = PlanarRPR_dyn_B(QNum);
 CMfile = PlanarRPR_dyn_C(QNum, zeros(3, 1));
-Gmfile = PlanarRPR_dyn_g(QNum);
+gMfile = PlanarRPR_dyn_g(QNum);
+YMfile = PlanarRPR_dyn_Y(zeros(3, 1), zeros(3, 1), QNum);
 
 % Generate C-code files
 MD.MassMatrix('Generate', 'ccode', 'File', 'PlanarRPR_dyn');
 MD.Coriolis  ('Generate', 'ccode', 'File', 'PlanarRPR_dyn');
 MD.Gravity   ('Generate', 'ccode', 'File', 'PlanarRPR_dyn');
+MD.Regressor ('Generate', 'ccode', 'File', 'PlanarRPR_dyn');
 
 % Generate MEX functions
 try
     MD.MassMatrix('Generate', 'mex', 'File', 'PlanarRPR_dyn');
     MD.Coriolis  ('Generate', 'mex', 'File', 'PlanarRPR_dyn');
     MD.Gravity   ('Generate', 'mex', 'File', 'PlanarRPR_dyn');
+    MD.Regressor ('Generate', 'mex', 'File', 'PlanarRPR_dyn');
 
     % Call generated MEX functions
     BMex = PlanarRPR_dyn_B(QNum);
     CMex = PlanarRPR_dyn_C(QNum, zeros(3, 1));
     GMex = PlanarRPR_dyn_g(QNum);
+    YMex = PlanarRPR_dyn_Y(zeros(3, 1), zeros(3, 1), QNum);
 
-    fprintf('B mex at q:'); disp(BMex);
-    fprintf('C mex at (q, qd):'); disp(CMex);
-    fprintf('g mex at q:'); disp(GMex);
+    fprintf('B mex at q:');            disp(BMex);
+    fprintf('C mex at (q, qd):');      disp(CMex);
+    fprintf('g mex at q:');            disp(GMex);
+    fprintf('Y mex at (qdd, qd, q):'); disp(YMex);
 catch ME
     warning(ME.identifier, '%s', ME.message);
 end
@@ -218,7 +227,8 @@ fprintf('\n =====  Performance Benchmark (1000 evaluations)  ===== \n');
 NIter = 1000;
 QSamples  = (rand(3, NIter) - 0.5) * 2*pi;
 QSamples(2, :) = (rand(1, NIter) - 0.5) * 1.0;   % Prismatic joint realistic range
-QdSamples = randn(3, NIter) * 0.5;
+QdSamples  = randn(3, NIter) * 0.5;
+QddSamples = randn(3, NIter) * 0.25;
 
 % Mass Matrix
 fprintf('\nMass matrix B(q):\n');
@@ -305,8 +315,36 @@ if exist(['PlanarRPR_dyn_g.' mexext], 'file')
 else
     tgx = NaN;
 end
-
 fprintf('Handle: %.4f s, mfile: %.4f s, mex: %.4f s\n', tgh, tgm, tgx);
+
+% Regressor Matrix
+fprintf('\nRegressor matrix Y(qdd, qd, q):\n');
+
+% Handle benchmark
+tic;
+for k = 1:NIter
+    YFun(QddSamples(:, k), QdSamples(:, k), QSamples(:, k));
+end
+tyh = toc;
+
+% mfile benchmark
+tic;
+for k = 1:NIter
+    PlanarRPR_dyn_Y(QddSamples(:, k), QdSamples(:, k), QSamples(:, k));
+end
+tym = toc;
+
+% mex benchmark (if exists)
+if exist(['PlanarRPR_dyn_B.' mexext], 'file')
+    tic;
+    for k = 1:NIter
+        PlanarRPR_dyn_Y(QddSamples(:, k), QdSamples(:, k), QSamples(:, k));
+    end
+    tyx = toc;
+else
+    tyx = NaN;
+end
+fprintf('Handle: %.4f s, mfile: %.4f s, mex: %.4f s\n', tyh, tym, tyx);
 
 %% ODE RHS Performance
 fprintf('\nODE RHS x_dot (1000 evaluations)\n');

@@ -49,6 +49,7 @@ kin.Jacobian('Type', 'analytical', 'Generate', 'mex', 'File', 'ur10_jac_ana');
 dyn.MassMatrix('Generate', 'mex', 'File', 'ur10_dyn');
 dyn.Coriolis  ('Generate', 'mex', 'File', 'ur10_dyn');
 dyn.Gravity   ('Generate', 'mex', 'File', 'ur10_dyn');
+dyn.Regressor ('Generate', 'mex', 'File', 'ur10_dyn');
 
 fprintf('\nCode Generation Complete!\n');
 
@@ -61,9 +62,11 @@ Jg   = ur10_jac_geo(q);
 B    = ur10_dyn_B(q);
 C    = ur10_dyn_C(q, qdot);
 g    = ur10_dyn_g(q);
+Y    = ur10_dyn_Y(qddot, qdot, q);
 
 disp('FK at Zero Config:');   disp(Pose)
 disp('Jacobian:');            disp(Jg)
 disp('Mass-Matrix:');         disp(B)
 disp('Coriolis:');            disp(C)
 disp('Gravity Vector:');      disp(g)
+disp('Regressor:');           disp(Y)

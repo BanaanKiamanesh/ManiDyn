@@ -27,6 +27,7 @@ Dyn = ManipulatorDynamics(DynPar, 'Gravity', [0, -9.81, 0]);
 simplify(Dyn.MassMatrix)
 simplify(Dyn.Coriolis)
 simplify(Dyn.Gravity)
+simplify(Dyn.Regressor)
 
 %% N = Bdot - 2*C Must be Skew-Sym
 syms q1 q2 qd1 qd2 real
