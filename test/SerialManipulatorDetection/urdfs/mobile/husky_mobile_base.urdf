@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="husky_mobile_base">
+  <link name="base_link" />
+  <link name="front_left_wheel" />
+  <joint name="front_left_wheel_joint" type="continuous">
+    <parent link="base_link" />
+    <child link="front_left_wheel" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+  </joint>
+  <link name="front_right_wheel" />
+  <joint name="front_right_wheel_joint" type="continuous">
+    <parent link="base_link" />
+    <child link="front_right_wheel" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+  </joint>
+  <link name="rear_left_wheel" />
+  <joint name="rear_left_wheel_joint" type="continuous">
+    <parent link="base_link" />
+    <child link="rear_left_wheel" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+  </joint>
+  <link name="rear_right_wheel" />
+  <joint name="rear_right_wheel_joint" type="continuous">
+    <parent link="base_link" />
+    <child link="rear_right_wheel" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+  </joint>
+</robot>

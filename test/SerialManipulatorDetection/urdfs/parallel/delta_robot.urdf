@@ -1,0 +1,76 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="delta_robot">
+  <link name="base_link" />
+  <link name="branch_1_link_1" />
+  <joint name="branch_1_joint_1" type="revolute">
+    <parent link="base_link" />
+    <child link="branch_1_link_1" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.14" upper="3.14" effort="100" velocity="2" />
+  </joint>
+  <link name="branch_1_link_2" />
+  <joint name="branch_1_joint_2" type="revolute">
+    <parent link="branch_1_link_1" />
+    <child link="branch_1_link_2" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.14" upper="3.14" effort="100" velocity="2" />
+  </joint>
+  <link name="branch_1_link_3" />
+  <joint name="branch_1_joint_3" type="revolute">
+    <parent link="branch_1_link_2" />
+    <child link="branch_1_link_3" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.14" upper="3.14" effort="100" velocity="2" />
+  </joint>
+  <link name="branch_2_link_1" />
+  <joint name="branch_2_joint_1" type="revolute">
+    <parent link="base_link" />
+    <child link="branch_2_link_1" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.14" upper="3.14" effort="100" velocity="2" />
+  </joint>
+  <link name="branch_2_link_2" />
+  <joint name="branch_2_joint_2" type="revolute">
+    <parent link="branch_2_link_1" />
+    <child link="branch_2_link_2" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.14" upper="3.14" effort="100" velocity="2" />
+  </joint>
+  <link name="branch_2_link_3" />
+  <joint name="branch_2_joint_3" type="revolute">
+    <parent link="branch_2_link_2" />
+    <child link="branch_2_link_3" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.14" upper="3.14" effort="100" velocity="2" />
+  </joint>
+  <link name="branch_3_link_1" />
+  <joint name="branch_3_joint_1" type="revolute">
+    <parent link="base_link" />
+    <child link="branch_3_link_1" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.14" upper="3.14" effort="100" velocity="2" />
+  </joint>
+  <link name="branch_3_link_2" />
+  <joint name="branch_3_joint_2" type="revolute">
+    <parent link="branch_3_link_1" />
+    <child link="branch_3_link_2" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.14" upper="3.14" effort="100" velocity="2" />
+  </joint>
+  <link name="branch_3_link_3" />
+  <joint name="branch_3_joint_3" type="revolute">
+    <parent link="branch_3_link_2" />
+    <child link="branch_3_link_3" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.14" upper="3.14" effort="100" velocity="2" />
+  </joint>
+</robot>

@@ -24,6 +24,7 @@ exported as `.m` files, C source, or compiled **MEX** binaries for real-time use
   - [Table of Contents](#table-of-contents)
   - [Installation](#installation)
   - [Defining a Manipulator](#defining-a-manipulator)
+  - [URDF Workflow](#urdf-workflow)
   - [Kinematics Workflow](#kinematics-workflow)
   - [Dynamics Workflow](#dynamics-workflow)
   - [Supported Output Formats](#supported-output-formats)
@@ -45,7 +46,12 @@ exported as `.m` files, C source, or compiled **MEX** binaries for real-time use
 >> install('save')       % adds folders to MATLAB path
 ```
 
-Alternatively add the `src` and `utils` folders to the `MATLABPATH` manually.
+Alternatively add `src` and `utils` (including its subfolders) to the MATLAB path manually:
+
+```matlab
+addpath('src');
+addpath(genpath('utils'));
+```
 
 ---
 
@@ -79,6 +85,51 @@ DynAll = DynStruct('Mass',    [1 1], ...          % REQUIRED → link masses
 
 % All fields may be symbolic – e.g. sym('m1'), pi/2, etc.
 ```
+
+---
+
+## URDF Workflow
+
+ManiDyn can read an expanded URDF without Robotics System Toolbox:
+
+```matlab
+robot = URDFRead('robot.urdf');
+
+% Returns 1 only when the complete URDF is one serial manipulator
+status = IsSerialManipulator('robot.urdf');
+
+% Generate Mass, Inertia, COM, Length, Radius, friction, and standard DH data
+DynAll = DynStruct('robot.urdf');
+
+% Or construct the models directly from the same URDF
+kin = ManipulatorKinematics('robot.urdf');
+dyn = ManipulatorDynamics('robot.urdf');
+
+% Equivalent name-value form; explicitly supplied fields take precedence
+DynAll = DynStruct('URDF', 'robot.urdf', 'Fv', zeros(1, 6));
+```
+
+`URDFRead` returns a tree-like structure with the base name, body names,
+all link and joint structures, parent-child relationships, transforms,
+limits, inertial properties, and primitive visual/collision geometry.
+
+`IsSerialManipulator` applies a strict whole-URDF test. The model must be
+one connected rooted tree with at least one revolute, continuous, or
+prismatic joint, and every movable joint must lie on one root-to-leaf path.
+Fixed tool and sensor branches are allowed; movable branches, floating or
+planar joints, disconnected models, and closed or multiply-parented
+topologies return `0`.
+
+For `DynStruct`, fixed bodies attached to an actuated body are aggregated
+using the parallel-axis theorem. COM vectors and inertia tensors are
+expressed in the generated standard-DH link frames. Link dimensions come
+from collision primitives (or visual primitives when collisions are absent);
+mesh-only links use DH-frame spacing and an inertia-equivalent radius.
+
+The input must be an expanded `.urdf` file; Xacro processing is not performed.
+Every extracted moving body must have positive inertial mass data.
+Both model constructors use `DynStruct` internally for URDF input; existing
+`DHStruct` and `DynStruct` constructor inputs remain supported.
 
 ---
 
@@ -222,10 +273,20 @@ Run ready-made demos in the *examples* directory:
 ```matlab
 >> run examples/UR10/UR10Dynamics              % UR10 FK/Jacobian/Dynamics
 >> run examples/SCARA/SCARADynamics            % SCARA FK/Jacobian/Dynamics
->> run "examples/Kinova Gen3/KinGen3Dynamics"  % Kinova Gen3 FK/Jacobian/Dynamics
+>> run "examples/Kinova Gen3/Direct/KinGen3Dynamics"  % Direct parameter definition
+
+% Extract the DynStruct and standard-DH table from a Kinova Gen3 URDF
+>> run "examples/Kinova Gen3/WithURDF/KinGen3URDFParameters"
+
+% Build the dynamics model directly and generate its MEX functions
+>> run "examples/Kinova Gen3/WithURDF/KinGen3URDFDynamics"
 ```
 
-Each script constructs `DHStruct` & `DynStruct`, builds kinematics & dynamics, and visualises results.
+The Kinova Gen3 examples separate direct parameter definition, URDF parameter
+extraction, and direct URDF dynamics construction. The URDF dynamics example
+generates MEX functions for the mass matrix, Coriolis matrix, gravity vector,
+and regressor. Deriving the full seven-joint symbolic dynamics model can take
+substantial time.
 
 ---
 
@@ -236,6 +297,12 @@ Basic regression tests are located in `test/`:
 ```matlab
 >> run test/PlanarRR    % 2-link planar RR arm
 >> run test/PlanarRPR   % 3-link planar RPR arm
+
+% URDF reader and serial-manipulator detection (all 21 robot fixtures)
+>> runtests('test/SerialManipulatorDetection','IncludeSubfolders',true)
+
+% SCARA, UR10, and Kinova Gen3 extraction against actual reference values
+>> runtests('test/DynStructURDF','IncludeSubfolders',true)
 ```
 
 ---
@@ -245,6 +312,7 @@ Basic regression tests are located in `test/`:
 * MATLAB R2021a or newer (earlier versions may work)
 * Symbolic Math Toolbox for full functionality
 * MATLAB Coder (optional) for MEX / C code generation
+* Robotics System Toolbox is not required for URDF reading or extraction
 
 ---
 

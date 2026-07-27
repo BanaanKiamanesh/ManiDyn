@@ -1,0 +1,56 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="crazyflie_quadcopter">
+  <link name="base_link" />
+  <link name="arm_1" />
+  <joint name="arm_1_fixed" type="fixed">
+    <parent link="base_link" />
+    <child link="arm_1" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+  </joint>
+  <link name="rotor_1" />
+  <joint name="rotor_1_joint" type="continuous">
+    <parent link="arm_1" />
+    <child link="rotor_1" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+  </joint>
+  <link name="arm_2" />
+  <joint name="arm_2_fixed" type="fixed">
+    <parent link="base_link" />
+    <child link="arm_2" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+  </joint>
+  <link name="rotor_2" />
+  <joint name="rotor_2_joint" type="continuous">
+    <parent link="arm_2" />
+    <child link="rotor_2" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+  </joint>
+  <link name="arm_3" />
+  <joint name="arm_3_fixed" type="fixed">
+    <parent link="base_link" />
+    <child link="arm_3" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+  </joint>
+  <link name="rotor_3" />
+  <joint name="rotor_3_joint" type="continuous">
+    <parent link="arm_3" />
+    <child link="rotor_3" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+  </joint>
+  <link name="arm_4" />
+  <joint name="arm_4_fixed" type="fixed">
+    <parent link="base_link" />
+    <child link="arm_4" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+  </joint>
+  <link name="rotor_4" />
+  <joint name="rotor_4_joint" type="continuous">
+    <parent link="arm_4" />
+    <child link="rotor_4" />
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+  </joint>
+</robot>

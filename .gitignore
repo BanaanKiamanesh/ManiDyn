@@ -4,6 +4,7 @@
 
 # Generated folders
 slprj/
+codegen/
 
 # General MATLAB backups and cache
 *.autosave

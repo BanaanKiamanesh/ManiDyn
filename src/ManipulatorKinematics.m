@@ -23,6 +23,9 @@
 %       % Create kinematics object
 %       kin = ManipulatorKinematics(dhParams);
 %
+%       % A serial-manipulator URDF can also be supplied directly
+%       kinFromURDF = ManipulatorKinematics('robot.urdf');
+%
 %       % Get a function handle for the forward kinematics
 %       fk_fun = kin.CalculateFK('Return', 'handle');
 %
@@ -33,7 +36,7 @@
 %       % Get the symbolic geometric Jacobian
 %       J_geom = kin.Jacobian('Type', 'geometric');
 %
-%   See also: ManipulatorDynamics, ParseDH, DHStruct.
+%   See also: ManipulatorDynamics, ParseDH, DHStruct, DynStruct, URDFRead.
 
 classdef ManipulatorKinematics
     properties (Access = private)
@@ -48,6 +51,10 @@ classdef ManipulatorKinematics
             %   OBJ = MANIPULATORKINEMATICS(DH) creates a kinematics model object
             %   from the Denavit-Hartenberg (DH) parameters.
             %
+            %   OBJ = MANIPULATORKINEMATICS(URDFPATH) reads a serial-manipulator
+            %   URDF using `DynStruct` and creates the kinematics model from its
+            %   generated DH parameters.
+            %
             %   Input Arguments:
             %       DH - A structure containing the DH parameters. It must have
             %            the following fields, each being a 1-by-n vector:
@@ -58,15 +65,31 @@ classdef ManipulatorKinematics
             %           .type  - A character array indicating joint types ('r' for
             %                    revolute, 'p' for prismatic, 'f' for fixed).
             %
+            %       URDFPath - Path to an expanded serial-manipulator .urdf file.
+            %
             %   Output Arguments:
             %       OBJ - The created ManipulatorKinematics object.
             %
             %   Throws:
+            %       ManipulatorKinematics:BadInput - If the input is neither a
+            %                                        scalar DHStruct nor a URDF path.
             %       ManipulatorKinematics:BadDH - If the DH struct is missing
             %                                     required fields.
             %       ManipulatorKinematics:SizeMismatch - If DH parameter vectors
             %                                            have inconsistent lengths.
-            arguments, DH (1, 1) struct, end
+            arguments, DH, end
+
+            % Convert direct URDF input into the standard DH structure.
+            isTextScalar = (ischar(DH) && isrow(DH)) || ...
+                (isstring(DH) && isscalar(DH));
+            if isTextScalar
+                DynPar = DynStruct(DH);
+                DH = DynPar.DH;
+            elseif ~(isstruct(DH) && isscalar(DH))
+                error('ManipulatorKinematics:BadInput', ...
+                    'Input must be a scalar DHStruct or a URDF path.');
+            end
+
             dhReq = {'alpha', 'a', 'd', 'theta', 'type'};
             if ~all(isfield(DH, dhReq))
                 dhMissing = dhReq(~isfield(DH, dhReq));

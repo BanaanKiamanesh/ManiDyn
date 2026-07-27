@@ -49,6 +49,9 @@
 %       % Create dynamics object
 %       dyn = ManipulatorDynamics(dynParams);
 %
+%       % A serial-manipulator URDF can also be supplied directly
+%       dynFromURDF = ManipulatorDynamics('robot.urdf');
+%
 %       % Mass matrix as function handle
 %       B_fun = dyn.MassMatrix('Return', 'handle');
 %
@@ -62,7 +65,7 @@
 %       tau = @(t) zeros(2,1);
 %       [t,y] = ode45(@(t,x) ode(t,x,tau(t)), [0 10], x0);
 %
-%   See also: ManipulatorKinematics, DynStruct, DHStruct.
+%   See also: ManipulatorKinematics, DynStruct, DHStruct, URDFRead.
 
 classdef ManipulatorDynamics < handle
     properties (Access = private)
@@ -87,6 +90,9 @@ classdef ManipulatorDynamics < handle
             %   OBJ = MANIPULATORDYNAMICS(DynPar) creates a dynamics model
             %   object from the dynamic parameters specified in the DynPar struct.
             %
+            %   OBJ = MANIPULATORDYNAMICS(URDFPATH) reads a serial-manipulator
+            %   URDF using `DynStruct` and creates the dynamics model directly.
+            %
             %   OBJ = MANIPULATORDYNAMICS(DynPar, 'Gravity', G) specifies a
             %   custom gravity vector G as a 1x3 array, e.g., [0, 0, -9.81].
             %
@@ -104,6 +110,8 @@ classdef ManipulatorDynamics < handle
             %                     compatible with the ManipulatorKinematics class.
             %                     It must have fields: alpha, a, d, theta, type.
             %
+            %       URDFPath - Path to an expanded serial-manipulator .urdf file.
+            %
             %       'Gravity' - (Optional name-value pair) A 1x3 vector specifying the
             %                   gravity acceleration [gx, gy, gz].
             %                   Default: [0, 0, -9.80665].
@@ -112,6 +120,8 @@ classdef ManipulatorDynamics < handle
             %       OBJ - The created ManipulatorDynamics object.
             %
             %   Throws:
+            %       ManipulatorDynamics:BadInput     - If the input is neither a
+            %                                          scalar DynStruct nor a URDF path.
             %       ManipulatorDynamics:MissingField - If DynPar is missing
             %                                          required fields.
             %       ManipulatorDynamics:BadInertia   - If the Inertia cell
@@ -121,8 +131,18 @@ classdef ManipulatorDynamics < handle
             %       ManipulatorDynamics:SizeMismatch - If DH parameter vectors
             %                                          have inconsistent lengths.
             arguments
-                DynPar (1, 1) struct
+                DynPar
                 opts.Gravity (1, 3) double = [0, 0, -9.80665]
+            end
+
+            % Convert direct URDF input into the standard parameter structure.
+            isTextScalar = (ischar(DynPar) && isrow(DynPar)) || ...
+                (isstring(DynPar) && isscalar(DynPar));
+            if isTextScalar
+                DynPar = DynStruct(DynPar);
+            elseif ~(isstruct(DynPar) && isscalar(DynPar))
+                error('ManipulatorDynamics:BadInput', ...
+                    'Input must be a scalar DynStruct or a URDF path.');
             end
 
             % -------- Validation ----------------------------------------
